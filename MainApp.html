@@ -99,6 +99,21 @@
     </style>
 </head>
 <body class="bg-brand-bg dark:bg-brand-dark-bg text-gray-800 dark:text-gray-100 h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
+    
+    <div id="global-loader" class="fixed inset-0 z-[200] bg-brand-bg dark:bg-brand-dark-bg flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="relative w-20 h-20">
+            <div class="absolute top-0 left-0 w-full h-full border-4 border-indigo-200 dark:border-indigo-900/30 rounded-full"></div>
+            <div class="absolute top-0 left-0 w-full h-full border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <p class="mt-4 text-gray-500 dark:text-gray-400 font-bold animate-pulse text-sm">系統載入中...</p>
+    </div>
+    <div id="auth-overlay" ... (原本的代碼)
+    
+    
+    
+    
+    
+    
     <div id="auth-overlay" class="fixed inset-0 z-[100] bg-gray-900 flex flex-col items-center justify-center transition-all duration-500">
         <div class="text-center space-y-6 p-8">
             <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto text-white text-3xl">
@@ -739,29 +754,43 @@
             const btnLogin = document.getElementById('btn-login');
             const authStatus = document.getElementById('auth-status');
             const overlay = document.getElementById('auth-overlay');
+            // ▼▼▼ 新增這一行：取得 Loader 元素 ▼▼▼
+            const loader = document.getElementById('global-loader'); 
 
             btnLogin.addEventListener('click', async () => {
-                try {
-                    authStatus.innerText = "連接 Google 中...";
-                    await signInWithPopup(auth, provider);
-                } catch (e) {
-                    authStatus.innerText = "登入失敗: " + e.message;
-                }
+                // ... (這裡不用改) ...
             });
 
-            // 登出功能
             window.logout = () => signOut(auth).then(()=> location.reload());
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
+                    // 1. 使用者已登入
                     AppState.user = user;
                     overlay.classList.add('opacity-0', 'pointer-events-none');
-                    UI.toast(`歡迎回來, ${user.displayName}`);
-                    await Core.loadFromCloud();
+                    
+                    // 2. 等待雲端資料下載完成 (這是最花時間的步驟)
+                    await Core.loadFromCloud(); 
+                    
                     UI.init();
-                    Core.checkDecay(); // 登入後檢查遺忘曲線
+                    Core.checkDecay(); 
+                    UI.toast(`歡迎回來, ${user.displayName}`);
+
+                    // ▼▼▼ 資料都好了，隱藏載入遮罩 ▼▼▼
+                    if(loader) {
+                        loader.classList.add('opacity-0', 'pointer-events-none');
+                        setTimeout(() => loader.remove(), 500); // 讓它淡出後完全移除
+                    }
+
                 } else {
+                    // 1. 使用者未登入
                     overlay.classList.remove('opacity-0', 'pointer-events-none');
+                    
+                    // ▼▼▼ 雖然沒登入，但也算「載入完成」(要顯示登入按鈕)，所以也要隱藏遮罩 ▼▼▼
+                    if(loader) {
+                        loader.classList.add('opacity-0', 'pointer-events-none');
+                        setTimeout(() => loader.remove(), 500);
+                    }
                 }
             });
         },
