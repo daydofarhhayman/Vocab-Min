@@ -344,7 +344,13 @@
                 <!-- Single -->
                 <div id="input-single-form" class="space-y-6">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2" data-i18n="lbl_word">單字</label>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-xs font-bold text-gray-500 uppercase" data-i18n="lbl_word">單字</label>
+                            <select id="ai-mode" class="text-xs font-bold bg-transparent text-indigo-600 dark:text-indigo-400 outline-none cursor-pointer border border-indigo-200 dark:border-indigo-800 rounded px-2 py-1 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition">
+                                <option value="zh">🇨🇳 中文翻譯</option>
+                                <option value="en">🇺🇸 英文定義</option>
+                            </select>
+                            </div>
                         <input type="text" id="add-word" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-bold text-lg" placeholder="Word">
                         <button onclick="Controller.features.autoFill()" class="absolute right-2 top-2 p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="AI Auto Fill">
                             <i class="fas fa-magic"></i> AI 填寫
@@ -714,8 +720,8 @@
         reader: { isPlaying: false, utterance: null, speed: 1.0 },
         backup: null,
         ai: {
-                apiKey: "AIzaSyBA94jcWzqdkR-sFrk0jnfc6X9HUNAZnOE", // TODO: 替換成你的 Key
-                model: "gemini-1.5-flash" // 使用 Flash 模型比較快且省錢
+                apiKey: "AIzaSyBar8GTQHPIfyRSdiH8plrLlkcFvUG1t2I", // TODO: 替換成你的 Key
+                model: "gemini-2.5-flash" // 使用 Flash 模型比較快且省錢
         }
     };
 
@@ -1000,49 +1006,69 @@
              return stats;
         },
 
-        fetchWordData: async (word) => {
+        fetchWordData: async (word, mode = 'zh') => { 
+
             if (!AppState.ai.apiKey) { alert("請填入 API Key"); return null; }
 
-            // --- 防呆處理開始 ---
-            // 1. 確保模型名稱不包含重複的 'models/'
-            let modelName = AppState.ai.model || "gemini-pro";
+            // ▼▼▼ 補回遺失的部分：定義 modelName ▼▼▼
+            let modelName = AppState.ai.model || "gemini-1.5-flash";
             if (modelName.startsWith("models/")) {
                 modelName = modelName.replace("models/", "");
             }
-            
-            // 2. 建構正確的 URL (注意 v1beta)
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${AppState.ai.apiKey}`;
-            // --- 防呆處理結束 ---
+            // ▲▲▲ 補回結束 ▲▲▲
 
-            const prompt = `
-                You are an English vocabulary dictionary. 
-                Word: "${word}".
-                Output JSON only: {"pos":"词性","def":"繁體中文定義","ex":"Example sentence"}
-            `;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${AppState.ai.apiKey}`;
+
+            // 設定 Prompt (根據模式切換)
+            let promptText = "";
+            if (mode === 'en') {
+                promptText = `
+                    You are an English vocabulary dictionary. 
+                    Word: "${word}".
+                    Provide a simple English definition.
+                    Output JSON only: {"pos":"part of speech (e.g. n., v.)","def":"Simple English definition","ex":"Simple English example sentence"}
+                `;
+            } else {
+                promptText = `
+                    You are an English vocabulary dictionary. 
+                    Word: "${word}".
+                    Provide the most common Traditional Chinese translation (NOT a description).
+                    Output JSON only: {"pos":"part of speech (e.g. n., v.)","def":"Traditional Chinese translation (concise)","ex":"Simple English example sentence"}
+                `;
+            }
 
             try {
                 UI.toast(`AI 查詢中 (${modelName})...`);
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) 
                 });
 
                 if (!response.ok) {
                     const err = await response.json();
-                    console.error("AI API Error Detail:", err); // 詳細錯誤會印在 Console
+                    console.error("AI API Error Detail:", err);
                     alert(`API 請求失敗 (${response.status}):\n${err.error?.message || response.statusText}`);
                     return null;
                 }
 
-                const data = await response.json();
-                // 解析邏輯維持原樣...
-                let text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
-                return JSON.parse(text);
+                const data = await response.json();              
+                let rawText = data.candidates[0].content.parts[0].text;
+                const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                let text = jsonMatch ? jsonMatch[0] : rawText;
+
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error("JSON Parse Error. Raw AI Text:", rawText);
+                    alert("AI 回傳格式錯誤，請重試");
+                    return null;
+                }
 
             } catch (e) {
                 console.error("Fetch Error:", e);
-                alert("網路請求錯誤，請看 Console");
+                // 這裡的錯誤訊息會更明確指出是不是程式碼寫錯
+                alert("執行錯誤 (請看 Console): " + e.message);
                 return null;
             }
         },
@@ -1916,7 +1942,8 @@
                     const word = wordInput.value.trim();
                     if (!word) { UI.toast("請先輸入單字"); return; }
 
-                    const data = await Core.fetchWordData(word);
+                    const mode = document.getElementById('ai-mode').value; // 取得使用者的選擇
+                    const data = await Core.fetchWordData(word, mode);     // 將選擇傳遞給 fetchWordData
                     
                     if (data) {
                         // 填入第一個釋義區塊
