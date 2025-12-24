@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VocabMin V7 - Audio Reader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'Segoe UI', 'Roboto', 'sans-serif'] },
+                    colors: {
+                        'brand-bg': '#f0f4f8',
+                        'brand-dark-bg': '#111827',
+                        'dict-n': '#2563eb',   // Noun
+                        'dict-v': '#db2777',   // Verb
+                        'dict-adj': '#d97706', // Adjective
+                        'dict-adv': '#9333ea', // Adverb
+                        'dict-phr': '#0d9488', // Phrase
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* UI Components */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+        .dark .glass-panel {
+            background: rgba(31, 41, 55, 0.8);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Theme Overrides */
+        body.theme-simple .glass-panel {
+            background: #ffffff; backdrop-filter: none; -webkit-backdrop-filter: none;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        body.theme-simple.dark .glass-panel {
+            background: #1f2937; border-bottom: 1px solid #374151;
+        }
+        body.theme-simple .bg-decoration { display: none; }
+
+        /* Flip Card */
+        .card-flip-container { perspective: 1000px; }
+        .card-inner {
+            position: relative; width: 100%; height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform-style: preserve-3d; transform-origin: center center;
+        }
+        .card-front, .card-back {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            border-radius: 1.5rem; overflow: hidden;
+        }
+        .card-back { transform: rotateY(180deg); overflow-y: auto; }
+        .card-front { z-index: 2; }
+        .flipped .card-inner { transform: rotateY(180deg); }
+
+        /* Reader Styles */
+        .reader-content { line-height: 1.8; font-size: 1.125rem; }
+        .reader-word { cursor: pointer; border-radius: 2px; transition: background-color 0.15s; }
+        .reader-word:hover { background-color: rgba(99, 102, 241, 0.2); }
+        .dark .reader-word:hover { background-color: rgba(99, 102, 241, 0.4); }
+        
+        /* Highlight Levels (Only applied when toggle is ON) */
+        .highlight-on .word-lvl-0 { color: #ef4444; border-bottom: 2px dotted #ef4444; } /* New - Red */
+        .highlight-on .word-lvl-1 { color: #f97316; border-bottom: 2px dotted #f97316; } /* Learning - Orange */
+        .highlight-on .word-lvl-2 { color: #3b82f6; } /* Familiar - Blue */
+        .highlight-on .word-lvl-3 { color: #10b981; } /* Mastered - Green */
+        
+        /* Dark mode overrides for highlight */
+        .dark .highlight-on .word-lvl-0 { color: #f87171; border-color: #f87171; }
+        .dark .highlight-on .word-lvl-1 { color: #fb923c; border-color: #fb923c; }
+        .dark .highlight-on .word-lvl-2 { color: #60a5fa; }
+        .dark .highlight-on .word-lvl-3 { color: #34d399; }
+
+        /* Utilities */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        
+        .animate-enter { animation: fade-in-up 0.3s ease-out forwards; }
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-brand-bg dark:bg-brand-dark-bg text-gray-800 dark:text-gray-100 h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
+    <div id="auth-overlay" class="fixed inset-0 z-[100] bg-gray-900 flex flex-col items-center justify-center transition-all duration-500">
+        <div class="text-center space-y-6 p-8">
+            <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto text-white text-3xl">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-white tracking-tight">VocabMin V7</h1>
+            <p class="text-gray-400">雲端同步版</p>
+            <button id="btn-login" class="px-8 py-3 bg-white text-gray-900 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-xl flex items-center gap-3 mx-auto">
+                <i class="fab fa-google text-red-500"></i> 使用 Google 帳號登入
+            </button>
+            <p id="auth-status" class="text-sm text-gray-500 h-5"></p>
+        </div>
+    </div>
+    <!-- Background -->
+    <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none opacity-50 dark:opacity-20 bg-decoration transition-opacity duration-500">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-300 rounded-full blur-[120px] mix-blend-multiply filter"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-300 rounded-full blur-[120px] mix-blend-multiply filter"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="glass-panel shadow-sm z-20 flex-shrink-0 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex justify-between items-center">
+            <div class="flex items-center cursor-pointer gap-3 group" onclick="Controller.nav.home()">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform text-white">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 hidden md:block">VocabMin</h1>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="Controller.nav.home()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition" title="回首頁">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button onclick="Controller.nav.settings()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition" title="設定">
+                    <i class="fas fa-cog text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-container" class="flex-1 overflow-y-auto relative w-full max-w-7xl mx-auto p-4 md:p-8 transition-all duration-300">
+        
+        <!-- VIEW: HOME -->
+        <div id="view-home" class="view-section flex flex-col md:flex-row h-full items-center justify-center animate-enter gap-8 md:gap-16">
+            <div class="w-full md:w-1/2 flex flex-col items-center justify-center">
+                <div class="relative w-64 h-64 md:w-80 md:h-80 mb-6 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="8" class="text-gray-200 dark:text-gray-700/50" />
+                        <circle id="progress-circle" cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" class="text-indigo-500 transition-all duration-1000 ease-out filter drop-shadow-lg" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="total-count" class="text-6xl md:text-7xl font-black text-gray-800 dark:text-white tracking-tighter">0</span>
+                        <span class="text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 mt-1 font-bold" data-i18n="stats_total_words">Total Words</span>
+                    </div>
+                </div>
+                <div class="flex gap-6 text-sm font-bold text-gray-600 dark:text-gray-300 bg-white/50 dark:bg-gray-800/50 px-6 py-3 rounded-full backdrop-blur-sm shadow-sm">
+                    <div class="flex items-center gap-2" title="Mastered"><span class="w-3 h-3 rounded-full bg-green-500 shadow-sm"></span><span id="stat-lvl-3">0</span></div>
+                    <div class="flex items-center gap-2" title="Familiar"><span class="w-3 h-3 rounded-full bg-blue-400 shadow-sm"></span><span id="stat-lvl-2">0</span></div>
+                    <div class="flex items-center gap-2" title="Learning"><span class="w-3 h-3 rounded-full bg-orange-400 shadow-sm"></span><span id="stat-lvl-1">0</span></div>
+                    <div class="flex items-center gap-2" title="New"><span class="w-3 h-3 rounded-full bg-red-400 shadow-sm"></span><span id="stat-lvl-0">0</span></div>
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/2 max-w-md flex flex-col gap-6">
+                <div class="relative w-full group z-10">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
+                    <input type="text" id="home-search" class="block w-full pl-11 pr-4 py-4 rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-2 border-transparent focus:border-indigo-500 dark:focus:border-indigo-500 shadow-sm focus:shadow-xl outline-none transition-all text-lg" placeholder="Search vocabulary..." data-i18n-placeholder="ph_search" oninput="Controller.features.handleSearch(this.value)">
+                    <div id="home-search-results" class="absolute w-full mt-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden hidden max-h-60 overflow-y-auto"></div>
+                </div>
+
+
+
+
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">    
+                    <button onclick="Controller.nav.add()" class="home-btn group border border-white dark:border-gray-700 flex flex-col items-center justify-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-32">
+                        <div class="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <span class="font-bold text-gray-700 dark:text-gray-200 text-sm" data-i18n="btn_input">新增單字</span>
+                    </button>
+                    
+                    <button onclick="Controller.nav.review()" class="home-btn group border border-white dark:border-gray-700 flex flex-col items-center justify-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-32">
+                        <div class="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/50 text-teal-600 dark:text-teal-400 flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <span class="font-bold text-gray-700 dark:text-gray-200 text-sm" data-i18n="btn_review">開始複習</span>
+                    </button>
+                    
+                    <button onclick="Controller.nav.list()" class="home-btn group border border-white dark:border-gray-700 flex flex-col items-center justify-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-32">
+                        <div class="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/50 text-orange-600 dark:text-orange-400 flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <span class="font-bold text-gray-700 dark:text-gray-200 text-sm" data-i18n="btn_list">單字庫</span>
+                    </button>
+
+                    <button onclick="Controller.nav.articlesList()" class="home-btn group border border-white dark:border-gray-700 flex flex-col items-center justify-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-32">
+                        <div class="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <span class="font-bold text-gray-700 dark:text-gray-200 text-sm" data-i18n="btn_reader">閱讀文章</span>
+                    </button>
+
+                    <button onclick="window.location.href='BookReader.html'" class="home-btn group border border-white dark:border-gray-700 flex flex-col items-center justify-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-32">
+                        <div class="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <span class="font-bold text-gray-700 dark:text-gray-200 text-sm" data-i18n="btn_pdf">PDF 書籍</span>
+                    </button>
+
+                    <button onclick="Controller.nav.stats()" class="home-btn group border border-white dark:border-gray-700 flex flex-col items-center justify-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-32">
+                        <div class="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <span class="font-bold text-gray-700 dark:text-gray-200 text-sm" data-i18n="btn_stats">學習統計</span>
+                    </button>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: SETTINGS -->
+        <div id="view-settings" class="view-section hidden max-w-2xl mx-auto animate-enter">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><i class="fas fa-sliders-h text-indigo-500"></i> <span data-i18n="title_settings">設定</span></h2>
+            <div class="space-y-4">
+                 <!-- Review Settings -->
+                 <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider" data-i18n="sec_review">複習設定</h3>
+                    
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-teal-600"><i class="fas fa-sort-amount-down"></i></div>
+                            <div class="flex flex-col">
+                                <span class="font-medium" data-i18n="opt_review_limit">單次複習數量上限</span>
+                                <span class="text-xs text-gray-400" data-i18n="desc_review_limit">避免單次複習過多單字</span>
+                            </div>
+                        </div>
+                        <select id="review-limit-select" onchange="Controller.settings.setReviewLimit(this.value)" class="bg-gray-100 dark:bg-gray-700 border-none rounded-lg text-sm font-bold p-2 outline-none">
+                            <option value="10">10 Words</option>
+                            <option value="20">20 Words</option>
+                            <option value="30">30 Words</option>
+                            <option value="50">50 Words</option>
+                            <option value="100">100 Words</option>
+                            <option value="9999">Unlimited</option>
+                        </select>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-blue-600"><i class="fas fa-object-group"></i></div>
+                            <div class="flex flex-col">
+                                <span class="font-medium" data-i18n="opt_merge_review">合併複習</span>
+                                <span class="text-xs text-gray-400" data-i18n="desc_merge_review">相同單字合併為一張卡片</span>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-merge-review" class="sr-only peer" onchange="Controller.settings.toggleMergeReview(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                        </label>
+                    </div>
+
+                     <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-teal-600"><i class="fas fa-volume-up"></i></div>
+                            <div class="flex flex-col">
+                                <span class="font-medium" data-i18n="opt_basic_mode">基礎模式</span>
+                                <span class="text-xs text-gray-400" data-i18n="desc_basic_mode">解釋與例句增加發音按鈕</span>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-basic-mode" class="sr-only peer" onchange="Controller.settings.toggleBasicMode(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider" data-i18n="sec_appearance">外觀</h3>
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><i class="fas fa-moon"></i></div>
+                            <span class="font-medium" data-i18n="opt_dark_mode">深色模式</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-dark-mode" class="sr-only peer" onchange="Controller.settings.toggleDarkMode(this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><i class="fas fa-paint-brush"></i></div>
+                            <span class="font-medium" data-i18n="opt_theme_style">主題風格</span>
+                        </div>
+                        <div class="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                            <button onclick="Controller.settings.setThemeStyle('glass')" id="btn-theme-glass" class="px-3 py-1.5 rounded-md text-xs font-bold transition">流光玻璃</button>
+                            <button onclick="Controller.settings.setThemeStyle('simple')" id="btn-theme-simple" class="px-3 py-1.5 rounded-md text-xs font-bold transition">簡約純色</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider" data-i18n="sec_language">語言</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="Controller.settings.setLanguage('zh')" id="lang-zh" class="py-2.5 rounded-xl border font-medium text-sm transition">繁體中文</button>
+                        <button onclick="Controller.settings.setLanguage('en')" id="lang-en" class="py-2.5 rounded-xl border font-medium text-sm transition">English</button>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider" data-i18n="sec_data">資料管理</h3>
+                    <div class="space-y-3">
+                        <input type="file" id="json-file-input" accept=".json" class="hidden" onchange="Controller.data.importJSON(this)">
+                        <input type="file" id="txt-file-input" accept=".txt" class="hidden" onchange="Controller.data.importTXT(this)">
+
+                        <button onclick="document.getElementById('json-file-input').click()" class="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/40 transition font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-file-import"></i> <span data-i18n="btn_import_json">匯入備份 (JSON)</span>
+                        </button>
+                        <button onclick="Controller.data.exportJSON()" class="w-full py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-100 dark:hover:bg-green-900/40 transition font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-file-export"></i> <span data-i18n="btn_export_json">匯出備份 (JSON)</span>
+                        </button>
+
+                        <button onclick="document.getElementById('txt-file-input').click()" class="w-full py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-book"></i> <span data-i18n="btn_import_txt">匯入書籍/文章 (.txt)</span>
+                        </button>
+
+                        <button onclick="Controller.data.clearAll()" class="w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition font-bold flex items-center justify-center gap-2">
+                            <i class="fas fa-trash-alt"></i> <span data-i18n="btn_clear">清空所有資料</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: ADD -->
+        <div id="view-add" class="view-section hidden max-w-2xl mx-auto animate-enter">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2"><i class="fas fa-plus-circle text-indigo-500"></i> <span data-i18n="title_add">新增單字</span></h2>
+                <button onclick="Controller.nav.list()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-6">
+                <div class="flex p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl mb-6" id="input-tabs">
+                    <button id="tab-single" class="flex-1 py-2 rounded-lg text-sm font-bold shadow-sm transition" onclick="Controller.forms.switchTab('single')" data-i18n="tab_single">單筆</button>
+                    <button id="tab-bulk" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 transition" onclick="Controller.forms.switchTab('bulk')" data-i18n="tab_bulk">批量</button>
+                </div>
+                <!-- Single -->
+                <div id="input-single-form" class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2" data-i18n="lbl_word">單字</label>
+                        <input type="text" id="add-word" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-bold text-lg" placeholder="Word">
+                        <button onclick="Controller.features.autoFill()" class="absolute right-2 top-2 p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="AI Auto Fill">
+                            <i class="fas fa-magic"></i> AI 填寫
+                        </button>
+                    </div>
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 text-xs text-blue-600 dark:text-blue-300 flex items-center gap-2"><i class="fas fa-info-circle"></i> <span data-i18n="hint_add_multiple">可新增多個釋義</span></div>
+                    
+                    <div id="add-definitions-container" class="space-y-4">
+                        <!-- Definition blocks will be added here dynamically -->
+                    </div>
+                    
+                    <button onclick="Controller.forms.appendDefinition('add-definitions-container')" class="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:border-indigo-500 hover:text-indigo-500 transition font-bold text-sm flex items-center justify-center gap-2"><i class="fas fa-plus"></i> <span data-i18n="btn_add_def">新增釋義</span></button>
+
+                    <button onclick="Controller.forms.saveNew()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-xl font-bold shadow-lg transform active:scale-95 transition-all mt-4">
+                        <i class="fas fa-check mr-2"></i><span data-i18n="btn_save">儲存</span>
+                    </button>
+                </div>
+                <!-- Bulk -->
+                <div id="input-bulk-form" class="hidden space-y-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800">
+                        <p class="font-bold mb-1"><i class="fas fa-info-circle mr-1"></i> 支援格式 (自動偵測):</p>
+                        <p class="font-mono text-xs opacity-80 mb-1">1. Excel 複製貼上 (Tab 分隔)</p>
+                        <p class="font-mono text-xs opacity-80">2. 標準 CSV (逗號分隔, 支援引號)</p>
+                    </div>
+                    <textarea id="inp-bulk-text" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm h-64" placeholder='"Word","POS","Definition","Example","Level"
+"apple","n.","A fruit","I eat an apple.","1"'></textarea>
+                    <button onclick="Controller.forms.addBulk()" class="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg transform active:scale-95 transition">
+                        <i class="fas fa-file-import mr-2"></i><span data-i18n="btn_import">匯入資料</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: EDIT -->
+        <div id="view-edit" class="view-section hidden max-w-2xl mx-auto animate-enter">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2"><i class="fas fa-pen-fancy text-teal-500"></i> <span data-i18n="title_edit">修改單字</span></h2>
+                <button onclick="Controller.nav.list()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="bg-white/90 dark:bg-gray-800/90 backdrop-blur rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-6">
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2" data-i18n="lbl_word">單字</label>
+                        <input type="text" id="edit-word" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition font-bold text-lg" placeholder="Word">
+                    </div>
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 text-xs text-blue-600 dark:text-blue-300 flex items-center gap-2"><i class="fas fa-info-circle"></i> <span data-i18n="hint_edit_multiple">此單字有多個釋義，請針對下方區塊分別修改。</span></div>
+                    <div id="edit-definitions-container" class="space-y-4"></div>
+                    <button onclick="Controller.forms.appendDefinition('edit-definitions-container')" class="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 hover:border-teal-500 hover:text-teal-500 transition font-bold text-sm flex items-center justify-center gap-2"><i class="fas fa-plus"></i> <span data-i18n="btn_add_def">新增釋義</span></button>
+                    <button onclick="Controller.forms.saveEdited()" class="w-full bg-gradient-to-r from-teal-500 to-green-500 text-white p-4 rounded-xl font-bold shadow-lg transform active:scale-95 transition-all mt-4"><i class="fas fa-save mr-2"></i><span data-i18n="btn_save">儲存修改</span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: LIST -->
+        <div id="view-list" class="view-section hidden flex flex-col h-full animate-enter max-w-7xl mx-auto w-full">
+            
+            <div class="bg-white dark:bg-gray-800 rounded-[2rem] shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col h-full overflow-hidden">
+                
+                <div class="px-8 py-6 border-b border-gray-100 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl z-20">
+                    
+                    <div class="flex items-center gap-4">
+                        <h2 class="text-3xl font-extrabold text-gray-800 dark:text-white tracking-tight" data-i18n="title_list">Vocabulary</h2>
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold text-sm" id="list-count">0</div>
+                        
+                        <div class="flex bg-gray-100 dark:bg-gray-700 rounded-full p-1 ml-2">
+                            <button onclick="Controller.features.toggleListViewMode('grid')" id="btn-view-grid" class="w-8 h-8 rounded-full flex items-center justify-center transition hover:bg-white hover:shadow-sm" title="Grid"><i class="fas fa-th-large text-xs"></i></button>
+                            <button onclick="Controller.features.toggleListViewMode('list')" id="btn-view-list" class="w-8 h-8 rounded-full flex items-center justify-center transition hover:bg-white hover:shadow-sm" title="List"><i class="fas fa-list-ul text-xs"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 w-full md:w-auto">
+                        <div class="relative flex-1 md:w-64 group">
+                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition"></i>
+                            <input type="text" id="list-search" oninput="UI.renderList(this.value)" class="w-full pl-12 pr-4 py-3 rounded-2xl border-none bg-gray-100 dark:bg-gray-700/50 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-indigo-100 transition outline-none font-medium" placeholder="Search..." data-i18n-placeholder="ph_search">
+                        </div>
+                        <button onclick="Controller.nav.add()" class="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hover:bg-indigo-700 hover:scale-105 transition active:scale-95">
+                            <i class="fas fa-plus text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="word-list-container" class="flex-1 overflow-y-auto custom-scrollbar p-0"></div>
+            </div>
+        </div>
+
+        <!-- VIEW: REVIEW -->
+        <div id="view-review" class="view-section hidden flex flex-col md:flex-row h-full items-center justify-center gap-8 md:gap-16 py-2 animate-enter">
+            <div class="w-full max-w-md flex flex-col items-center">
+                 <div class="w-full flex justify-between items-center mb-4 px-2">
+                    <button onclick="Controller.nav.home()" class="text-gray-400 hover:text-gray-600 transition"><i class="fas fa-arrow-left"></i></button>
+                    <span id="review-progress" class="font-mono font-bold text-gray-500 text-sm">0/0</span>
+                </div>
+                <div id="flashcard-container" class="w-full aspect-[4/5] relative card-flip-container cursor-pointer mb-6" onclick="Controller.features.flipCard()">
+                    <div id="flashcard-inner" class="card-inner shadow-2xl rounded-[1.5rem]">
+                        <div class="card-front bg-white dark:bg-gray-800 flex flex-col items-center justify-center p-8 border border-gray-100 dark:border-gray-700 relative">
+                             <div id="card-front-status" class="absolute top-6 right-6"></div>
+                             <div class="flex-1 flex flex-col items-center justify-center w-full">
+                                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Word</span>
+                                <h3 id="card-word" class="text-4xl md:text-5xl font-black text-center text-gray-800 dark:text-white break-words w-full leading-tight">Loading</h3>
+                                <button onclick="Utils.speakCurrent(event)" class="mt-6 w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 hover:scale-110 transition flex items-center justify-center"><i class="fas fa-volume-up text-lg"></i></button>
+                             </div>
+                             <div class="text-gray-400 text-sm animate-pulse mb-2" data-i18n="hint_flip">Tap to flip</div>
+                             <div id="card-last-review" class="text-[10px] text-gray-300 dark:text-gray-600 font-mono"></div>
+                        </div>
+                        <div class="card-back bg-white dark:bg-gray-800 flex flex-col p-8 border border-gray-100 dark:border-gray-700">
+                             <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-4">
+                                <h3 id="card-back-word" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 truncate pr-2">Word</h3>
+                                <button onclick="Utils.speakCurrent(event)" class="text-indigo-400 hover:text-indigo-600 transition"><i class="fas fa-volume-up"></i></button>
+                             </div>
+                             <div id="card-back-content" class="flex-1 overflow-y-auto space-y-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full max-w-sm flex flex-col gap-6">
+                <div class="bg-white/50 dark:bg-gray-800/50 backdrop-blur rounded-2xl p-4 border border-white dark:border-gray-700 shadow-sm">
+                    <span class="text-xs font-bold text-gray-400 uppercase mb-2 block">Review Filter</span>
+                    <div class="flex gap-2 justify-between" id="filter-container"></div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-1 gap-3">
+                    <button onclick="Controller.features.setRate(0, event)" class="py-4 md:py-3 px-4 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 border border-transparent transition font-bold text-sm flex items-center justify-center md:justify-start gap-3 group shadow-sm"><span class="text-2xl group-hover:scale-110 transition">😫</span><div class="flex flex-col items-start"><span data-i18n="lvl_new">陌生</span></div></button>
+                    <button onclick="Controller.features.setRate(1, event)" class="py-4 md:py-3 px-4 rounded-xl bg-orange-50 text-orange-500 hover:bg-orange-100 dark:bg-orange-900/20 dark:hover:bg-orange-900/40 border border-transparent transition font-bold text-sm flex items-center justify-center md:justify-start gap-3 group shadow-sm"><span class="text-2xl group-hover:scale-110 transition">😕</span><div class="flex flex-col items-start"><span data-i18n="lvl_learning">學習</span></div></button>
+                    <button onclick="Controller.features.setRate(2, event)" class="py-4 md:py-3 px-4 rounded-xl bg-blue-50 text-blue-500 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 border border-transparent transition font-bold text-sm flex items-center justify-center md:justify-start gap-3 group shadow-sm"><span class="text-2xl group-hover:scale-110 transition">🙂</span><div class="flex flex-col items-start"><span data-i18n="lvl_familiar">熟悉</span></div></button>
+                    <button onclick="Controller.features.setRate(3, event)" class="py-4 md:py-3 px-4 rounded-xl bg-green-50 text-green-500 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 border border-transparent transition font-bold text-sm flex items-center justify-center md:justify-start gap-3 group shadow-sm"><span class="text-2xl group-hover:scale-110 transition">😎</span><div class="flex flex-col items-start"><span data-i18n="lvl_mastered">精通</span></div></button>
+                </div>
+                <div class="hidden md:block text-xs text-center text-gray-400 font-medium"><i class="fas fa-keyboard mr-1"></i> <span data-i18n="hint_keyboard">Space: Flip | Arrow Right: Next | 1-4: Rate</span></div>
+            </div>
+        </div>
+
+        <!-- VIEW: STATS -->
+        <div id="view-stats" class="view-section hidden max-w-7xl mx-auto flex flex-col md:flex-row h-full animate-enter gap-6">
+            <div class="w-full md:w-3/12 flex flex-col gap-6">
+                <h2 class="text-2xl font-bold text-purple-600 dark:text-purple-400" data-i18n="title_stats">學習檢視</h2>
+                <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border-l-4 border-purple-500 shadow-sm">
+                    <div class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2"><i class="fas fa-calendar-day"></i> <span data-i18n="stat_today">今日概況</span></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><div class="text-xs text-gray-400 mb-1" data-i18n="stat_added_short">新增</div><div class="text-2xl font-black text-gray-800 dark:text-white" id="today-added-count">0</div></div>
+                        <div><div class="text-xs text-gray-400 mb-1" data-i18n="stat_reviewed_short">複習</div><div class="text-2xl font-black text-gray-800 dark:text-white" id="today-reviewed-count">0</div></div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl p-4 flex items-center gap-4 border border-indigo-100 dark:border-indigo-800">
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-300"><i class="fas fa-plus"></i></div>
+                        <div><div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase" data-i18n="stat_month_added">本月新增</div><div class="text-xl font-black text-gray-800 dark:text-white" id="month-added-count">0</div></div>
+                    </div>
+                    <div class="bg-green-50 dark:bg-green-900/20 rounded-2xl p-4 flex items-center gap-4 border border-green-100 dark:border-green-800">
+                        <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center text-green-600 dark:text-green-300"><i class="fas fa-history"></i></div>
+                        <div><div class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase" data-i18n="stat_month_reviewed">本月複習</div><div class="text-xl font-black text-gray-800 dark:text-white" id="month-reviewed-count">0</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full md:w-9/12 bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full min-h-[500px]">
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="UI.changeMonth(-1)" class="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center justify-center text-gray-500"><i class="fas fa-chevron-left"></i></button>
+                    <span id="calendar-month-year" class="font-bold text-xl text-gray-800 dark:text-gray-200">Date</span>
+                    <button onclick="UI.changeMonth(1)" class="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition flex items-center justify-center text-gray-500"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="grid grid-cols-7 gap-1 mb-2 text-center text-xs font-bold text-gray-400 uppercase tracking-wider"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+                <div id="calendar-grid" class="grid grid-cols-7 gap-2 auto-rows-fr flex-1"></div>
+            </div>
+        </div>
+
+        <!-- VIEW: ARTICLE LIST (NEW) -->
+        <div id="view-articles-list" class="view-section hidden animate-enter max-w-4xl mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2"><i class="fas fa-book-reader text-blue-500"></i> <span data-i18n="title_reader">閱讀文章</span></h2>
+                <div class="flex gap-2">
+                    <button onclick="Controller.data.exportJSON()" class="bg-green-50 text-green-600 px-3 py-2 rounded-xl hover:bg-green-100 transition flex items-center gap-2 font-bold text-sm" title="Backup">
+                         <i class="fas fa-file-export"></i> 匯出
+                    </button>
+                    <button onclick="Controller.nav.articleEdit()" class="bg-blue-600 text-white px-4 py-2 rounded-xl shadow-md hover:bg-blue-700 transition flex items-center gap-2 font-bold">
+                        <i class="fas fa-plus"></i> <span class="hidden md:inline" data-i18n="btn_add_article">新增文章</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="articles-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            
+            <div id="empty-articles" class="hidden text-center py-20">
+                <div class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-3xl"><i class="fas fa-file-alt"></i></div>
+                <h3 class="text-lg font-bold text-gray-600 dark:text-gray-300 mb-2">No Articles Yet</h3>
+                <p class="text-sm text-gray-400">Add an article to start reading and learning words in context.</p>
+            </div>
+        </div>
+
+        <!-- VIEW: ARTICLE EDIT (NEW) -->
+        <div id="view-article-edit" class="view-section hidden animate-enter max-w-3xl mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2"><i class="fas fa-pen text-blue-500"></i> <span id="article-form-title">New Article</span></h2>
+                <button onclick="Controller.nav.articlesList()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-4">
+                <input type="hidden" id="article-id">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Title</label>
+                    <input type="text" id="article-title" class="w-full p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition font-bold" placeholder="Article Title">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Content</label>
+                    <textarea id="article-content" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition font-mono text-sm h-[60vh] resize-none leading-relaxed" placeholder="Paste text here..."></textarea>
+                </div>
+                <button onclick="Controller.reader.saveArticle()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg transform active:scale-95 transition-all">
+                    <i class="fas fa-save mr-2"></i> Save Article
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW: READER (NEW) -->
+        <div id="view-reader" class="view-section hidden animate-enter h-full flex flex-col max-w-4xl mx-auto w-full">
+            <div class="flex flex-wrap items-center justify-between mb-4 flex-shrink-0 px-2 gap-2">
+                <button onclick="Controller.nav.articlesList()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition flex items-center gap-2">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                
+                <!-- Player Controls -->
+                <div class="flex items-center gap-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <select id="reader-speed" onchange="Controller.reader.setSpeed(this.value)" class="text-xs font-bold bg-transparent outline-none text-gray-600 dark:text-gray-300 cursor-pointer">
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1" selected>1.0x</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                        <option value="2">2.0x</option>
+                    </select>
+                    <div class="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+                    <button id="btn-reader-stop" onclick="Controller.reader.stopArticle()" class="w-7 h-7 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition" title="Stop">
+                        <i class="fas fa-stop text-xs"></i>
+                    </button>
+                    <button id="btn-reader-play" onclick="Controller.reader.togglePlay()" class="w-8 h-8 rounded-full flex items-center justify-center bg-indigo-600 text-white shadow-md hover:bg-indigo-700 transition" title="Play/Pause">
+                        <i class="fas fa-play text-xs ml-0.5"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2 bg-white dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <button id="btn-toggle-highlight" onclick="Controller.reader.toggleHighlight()" class="px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 text-gray-500">
+                        <i class="fas fa-highlighter"></i> Highlight
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex-1 overflow-hidden flex flex-col">
+                <div class="p-6 md:p-10 overflow-y-auto flex-1 custom-scrollbar" id="reader-scroll-container">
+                    <h1 id="reader-title" class="text-3xl font-black mb-6 text-gray-800 dark:text-white leading-tight"></h1>
+                    <div id="reader-body" class="reader-content text-gray-700 dark:text-gray-300 font-serif pb-20"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-full shadow-2xl transition-all duration-300 opacity-0 translate-y-[-20px] pointer-events-none z-50 text-sm font-bold flex items-center gap-2"><i class="fas fa-info-circle"></i> <span id="toast-msg"></span></div>
+
+    <!-- POPUP: Word Action (For Reader) -->
+    <div id="word-popup" class="fixed hidden z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-600 p-4 w-80 transform transition-all duration-200 scale-95 opacity-0">
+        <div class="flex justify-between items-start mb-3">
+            <h3 id="popup-word" class="text-xl font-bold text-indigo-600 dark:text-indigo-400 break-words">Word</h3>
+            <button onclick="UI.reader.hidePopup()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <!-- Known Word -->
+        <div id="popup-known" class="hidden space-y-3">
+            <div id="popup-defs" class="text-sm text-gray-700 dark:text-gray-300 space-y-2 max-h-40 overflow-y-auto"></div>
+            <div class="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <span id="popup-level" class="text-xs font-bold px-2 py-1 rounded bg-gray-100 dark:bg-gray-700">Level</span>
+                <button id="btn-popup-edit" class="text-xs text-blue-500 font-bold hover:underline">Edit</button>
+            </div>
+        </div>
+
+        <!-- New Word -->
+        <div id="popup-new" class="hidden">
+            <p class="text-xs text-gray-400 font-bold uppercase mb-2">New Word Entry</p>
+            <div class="space-y-3">
+                <input type="text" id="popup-input-def" class="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-1 focus:ring-indigo-500 outline-none" placeholder="Definition (解釋)...">
+                <div class="relative">
+                    <div class="flex justify-between items-center mb-1 px-1">
+                        <span class="text-[10px] text-gray-400 font-bold uppercase flex items-center gap-2">Example <button onclick="Utils.speak(document.getElementById('popup-input-ex').value, event, 1.0)" class="text-indigo-500 hover:text-indigo-700" title="Listen to example"><i class="fas fa-volume-up"></i></button></span>
+                        <div class="flex gap-1">
+                             <button onclick="Controller.reader.clearEx()" class="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500 hover:text-red-500 transition" title="Clear"><i class="fas fa-eraser"></i></button>
+                             <button onclick="Controller.reader.restoreEx()" class="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500 hover:text-blue-500 transition" title="Restore Original"><i class="fas fa-undo"></i></button>
+                             <button onclick="Controller.reader.useSelection()" class="text-[10px] bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded text-indigo-500 hover:bg-indigo-100 transition font-bold" title="Use text currently selected in article"><i class="fas fa-magic"></i> 選取填入</button>
+                        </div>
+                    </div>
+                    <textarea id="popup-input-ex" class="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 h-20 resize-none focus:ring-1 focus:ring-indigo-500 outline-none" placeholder="Example Sentence..."></textarea>
+                </div>
+                <button onclick="Controller.reader.quickAdd()" class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition">新增至單字庫</button>
+                <button onclick="window.open(`https://dictionary.cambridge.org/dictionary/english/${document.getElementById('popup-word').innerText}`, '_blank')" class="w-full py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700">查詢 Cambridge</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+    // --- 0. FIREBASE IMPORTS & CONFIG ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // TODO: 貼上你的 Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyBQ7hfoJkvMNRT4qPoSz5CyJ2KisOAYXSA",
+        authDomain: "vocabmin-app.firebaseapp.com",
+        projectId: "vocabmin-app",
+        storageBucket: "vocabmin-app.firebasestorage.app",
+        messagingSenderId: "995953552362",
+        appId: "1:995953552362:web:2b36cd803765a622bca093",
+        measurementId: "G-TLX1STZPB3"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // --- 1. CONFIG & TRANSLATIONS (維持原樣) ---
+    const CONFIG = {
+        defaults: { darkMode: false, lang: 'zh', themeStyle: 'glass', listViewMode: 'grid', basicMode: false, mergeReview: false, reviewLimit: 30, articleHighlight: false }
+    };
+    
+    // ... (此處保留原本的 TRANSLATIONS 物件，內容太長省略，請照舊複製) ...
+    const TRANSLATIONS = {
+        zh: {
+            title_list: "單字庫", title_settings: "設定", title_add: "新增單字", title_edit: "修改單字", title_review: "複習", title_stats: "學習檢視", title_reader: "閱讀文章",
+            btn_input: "新增單字", btn_review: "開始複習", btn_list: "單字庫", btn_stats: "學習統計", btn_reader: "閱讀文章",btn_pdf: "PDF 書籍",btn_import_json: "匯入備份 (JSON)",btn_export_json: "匯出備份 (JSON)",btn_import_txt: "匯入書籍/文章 (.txt)",
+            tab_single: "單筆輸入", tab_bulk: "批量匯入 (Excel)",
+            lbl_word: "單字", lbl_pos: "詞性", lbl_def: "解釋", lbl_ex: "例句",
+            btn_save: "儲存", btn_add_def: "新增釋義", btn_import: "匯入資料", btn_import_csv: "匯入 CSV", btn_export: "匯出 CSV", btn_clear: "清空所有資料", btn_add_article: "新增文章",
+            opt_dark_mode: "深色模式", opt_theme_style: "主題風格", opt_basic_mode: "基礎模式", desc_basic_mode: "解釋與例句增加發音按鈕",
+            opt_merge_review: "合併複習", desc_merge_review: "相同單字合併為一張卡片",
+            opt_review_limit: "單次複習數量", desc_review_limit: "限制每次複習的單字量",
+            sec_appearance: "外觀", sec_language: "語言", sec_data: "資料管理", sec_review: "複習設定",
+            lvl_new: "陌生", lvl_learning: "學習", lvl_familiar: "熟悉", lvl_mastered: "精通",
+            ph_search: "搜尋單字...", hint_flip: "點擊翻轉", hint_keyboard: "空白鍵: 翻牌 | →: 下一張 | 1-4: 評分", hint_edit_multiple: "此單字有多個釋義", hint_add_multiple: "可新增多個釋義",
+            stat_added: "新增", stat_reviewed: "複習", stats_total_words: "總單字量", stat_today: "今日概況", stat_added_short: "新增", stat_reviewed_short: "複習", stat_month_added: "本月新增", stat_month_reviewed: "本月複習",
+            msg_saved: "儲存成功", msg_updated: "更新成功", msg_empty: "請輸入完整資料", msg_duplicate: "單字已存在", msg_imported: "匯入成功",
+            list_header_word: "單字", list_header_pos: "詞性", list_header_level: "熟練度", list_header_action: "操作",
+        },
+        en: {
+            // ... 請自行補上原本的英文翻譯 ...
+             title_list: "Vocabulary", title_settings: "Settings", title_add: "Add Word", title_edit: "Edit Word", title_review: "Review", title_stats: "Stats", title_reader: "Reader",
+            btn_input: "Add Words", btn_review: "Start Review", btn_list: "Library", btn_stats: "Statistics", btn_reader: "Reader",btn_pdf: "PDF Books",btn_import_json: "Import Backup (JSON)",btn_export_json: "Export Backup (JSON)",btn_import_txt: "Import Book/Article (.txt)",
+            tab_single: "Single", tab_bulk: "Bulk",
+            lbl_word: "Word", lbl_pos: "POS", lbl_def: "Definition", lbl_ex: "Example",
+            btn_save: "Save", btn_add_def: "Add Def", btn_import: "Import", btn_import_csv: "Import CSV", btn_export: "Export CSV", btn_clear: "Clear Data", btn_add_article: "New Article",
+            opt_dark_mode: "Dark Mode", opt_theme_style: "Theme", opt_basic_mode: "Basic Mode", desc_basic_mode: "TTS for definitions",
+            opt_merge_review: "Merge Review", desc_merge_review: "Merge same words into one card",
+            opt_review_limit: "Review Limit", desc_review_limit: "Max words per session",
+            sec_appearance: "Appearance", sec_language: "Language", sec_data: "Data", sec_review: "Review Settings",
+            lvl_new: "New", lvl_learning: "Learning", lvl_familiar: "Familiar", lvl_mastered: "Mastered",
+            ph_search: "Search...", hint_flip: "Tap to flip", hint_keyboard: "Space: Flip | →: Next | 1-4: Rate", hint_edit_multiple: "Multiple definitions", hint_add_multiple: "Add multiple meanings",
+            stat_added: "Added", stat_reviewed: "Reviewed", stats_total_words: "Total Words", stat_today: "Today", stat_added_short: "Added", stat_reviewed_short: "Reviewed", stat_month_added: "Month Added", stat_month_reviewed: "Month Reviewed",
+            msg_saved: "Saved!", msg_updated: "Updated!", msg_empty: "Fill fields", msg_duplicate: "Exists!", msg_imported: "Imported!",
+            list_header_word: "Word", list_header_pos: "POS", list_header_level: "Level", list_header_action: "Action"
+        }
+    };
+
+    const REVIEW_STAGES = [1, 3, 7, 14, 30, 60, 120, 240, 365];
+
+    // --- 2. STATE ---
+    // 這裡我們維持 AppState 在記憶體中，但資料來源是 Firebase
+    const AppState = {
+        user: null, // Firebase User
+        words: [], articles: [], dailyStats: {}, settings: { ...CONFIG.defaults },
+        review: { queue: [], index: 0, isFlipped: false, filters: [0, 1, 2, 3] },
+        calDate: new Date(), editingIds: [],
+        currentTokens: [],
+        tempSentence: "",
+        reader: { isPlaying: false, utterance: null, speed: 1.0 },
+        backup: null,
+        ai: {
+                apiKey: "AIzaSyBA94jcWzqdkR-sFrk0jnfc6X9HUNAZnOE", // TODO: 替換成你的 Key
+                model: "gemini-1.5-flash" // 使用 Flash 模型比較快且省錢
+        }
+    };
+
+    // --- 3. CORE (Business Logic - REFACTORED FOR FIREBASE) ---
+    const Core = {
+        // 初始化現在改為監聽 Auth 狀態
+        init: () => {
+            const btnLogin = document.getElementById('btn-login');
+            const authStatus = document.getElementById('auth-status');
+            const overlay = document.getElementById('auth-overlay');
+
+            btnLogin.addEventListener('click', async () => {
+                try {
+                    authStatus.innerText = "連接 Google 中...";
+                    await signInWithPopup(auth, provider);
+                } catch (e) {
+                    authStatus.innerText = "登入失敗: " + e.message;
+                }
+            });
+
+            // 登出功能
+            window.logout = () => signOut(auth).then(()=> location.reload());
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    AppState.user = user;
+                    overlay.classList.add('opacity-0', 'pointer-events-none');
+                    UI.toast(`歡迎回來, ${user.displayName}`);
+                    await Core.loadFromCloud();
+                    UI.init();
+                    Core.checkDecay(); // 登入後檢查遺忘曲線
+                } else {
+                    overlay.classList.remove('opacity-0', 'pointer-events-none');
+                }
+            });
+        },
+
+        // 從 Firebase 載入所有資料
+        loadFromCloud: async () => {
+            if (!AppState.user) return;
+            const uid = AppState.user.uid;
+
+            // 1. Load Settings
+            const settingsSnap = await getDoc(doc(db, 'users', uid, 'data', 'settings'));
+            if (settingsSnap.exists()) AppState.settings = { ...AppState.settings, ...settingsSnap.data() };
+
+            // 2. Load Stats
+            const statsSnap = await getDoc(doc(db, 'users', uid, 'data', 'stats'));
+            if (statsSnap.exists()) AppState.dailyStats = statsSnap.data();
+
+            // 3. Load Words (Subcollection)
+            const wordsSnap = await getDocs(collection(db, 'users', uid, 'words'));
+            AppState.words = [];
+            wordsSnap.forEach(doc => AppState.words.push(doc.data()));
+            // Sort words by time
+            AppState.words.sort((a, b) => b.timestamp - a.timestamp);
+
+            // 4. Load Articles (Subcollection)
+            const articlesSnap = await getDocs(collection(db, 'users', uid, 'articles'));
+            AppState.articles = [];
+            articlesSnap.forEach(doc => AppState.articles.push(doc.data()));
+            AppState.articles.sort((a, b) => b.timestamp - a.timestamp);
+
+            UI.applySettings();
+            UI.updateStats();
+        },
+
+        // --- CRUD Operations (Cloud) ---
+
+        // 新增單字：寫入 Cloud 並更新 Local State
+        addWord: async (data) => {
+            if (!AppState.user) return;
+            const now = Date.now();
+            const id = now + Math.random().toString(36).substr(2, 5);
+            const lvl = data.level !== undefined ? parseInt(data.level) : 0;
+            const newWord = { 
+                id: id, // 使用字串 ID
+                ...data, 
+                level: isNaN(lvl) ? 0 : lvl, 
+                timestamp: now, 
+                lastReview: now 
+            };
+
+            // Firebase Write
+            await setDoc(doc(db, 'users', AppState.user.uid, 'words', id), newWord);
+            
+            // Local Update
+            AppState.words.unshift(newWord);
+            Core.recordActivity('added'); // Stats are saved separately
+        },
+
+        updateWord: async (id, data) => {
+            if (!AppState.user) return;
+            const idx = AppState.words.findIndex(w => w.id === id);
+            if (idx > -1) {
+                const updated = { ...AppState.words[idx], ...data };
+                // Firebase Update
+                await updateDoc(doc(db, 'users', AppState.user.uid, 'words', id), data);
+                // Local Update
+                AppState.words[idx] = updated;
+            }
+        },
+
+        deleteWord: async (id) => {
+            if (!AppState.user) return;
+            // Firebase Delete
+            await deleteDoc(doc(db, 'users', AppState.user.uid, 'words', id));
+            // Local Delete
+            AppState.words = AppState.words.filter(w => w.id !== id);
+            UI.updateStats();
+        },
+
+        deleteGroup: async (term) => {
+            if (!AppState.user) return;
+            const toDelete = AppState.words.filter(w => w.term.toLowerCase() === term.toLowerCase());
+            
+            // Batch delete for efficiency
+            const batch = writeBatch(db);
+            toDelete.forEach(w => {
+                batch.delete(doc(db, 'users', AppState.user.uid, 'words', w.id));
+            });
+            await batch.commit();
+
+            AppState.words = AppState.words.filter(w => w.term.toLowerCase() !== term.toLowerCase());
+            UI.updateStats();
+        },
+
+        // Articles
+        addArticle: async (title, content) => {
+            if (!AppState.user) return;
+            const now = Date.now();
+            const id = now + Math.random().toString(36).substr(2, 5);
+            const excerpt = content.substring(0, 100).replace(/\n/g, ' ') + '...';
+            const newArt = { id, title, content, excerpt, timestamp: now };
+            
+            await setDoc(doc(db, 'users', AppState.user.uid, 'articles', id), newArt);
+            AppState.articles.unshift(newArt);
+        },
+
+        updateArticle: async (id, title, content) => {
+            if (!AppState.user) return;
+            const excerpt = content.substring(0, 100) + '...';
+            await updateDoc(doc(db, 'users', AppState.user.uid, 'articles', id), { title, content, excerpt });
+            
+            const idx = AppState.articles.findIndex(a => a.id === id);
+            if (idx > -1) AppState.articles[idx] = { ...AppState.articles[idx], title, content, excerpt };
+        },
+
+        deleteArticle: async (id) => {
+            if (!AppState.user) return;
+            await deleteDoc(doc(db, 'users', AppState.user.uid, 'articles', id));
+            AppState.articles = AppState.articles.filter(a => a.id !== id);
+        },
+
+        // Stats & Activity
+        recordActivity: async (type) => {
+            if (!AppState.user) return;
+            const today = new Date().toISOString().split('T')[0];
+            if (!AppState.dailyStats[today]) AppState.dailyStats[today] = { added: 0, reviewed: 0 };
+            AppState.dailyStats[today][type]++;
+            
+            // Save Stats (Whole object for simplicity, or use set with merge)
+            await setDoc(doc(db, 'users', AppState.user.uid, 'data', 'stats'), AppState.dailyStats);
+            UI.updateStats();
+        },
+
+        // Settings
+        saveSettings: async () => {
+            if (!AppState.user) return;
+            await setDoc(doc(db, 'users', AppState.user.uid, 'data', 'settings'), AppState.settings);
+        },
+
+        // 遺忘曲線檢查 (批次更新)
+        checkDecay: async () => {
+            if (!AppState.user) return 0;
+            const now = Date.now();
+            let decayedCount = 0;
+            const batch = writeBatch(db);
+            let batchCount = 0;
+
+            AppState.words.forEach(w => {
+                if (!w.interval) w.interval = 1;
+                w.nextReview = w.lastReview + (w.interval * 86400000);
+                const overdueDays = (now - w.nextReview) / (1000 * 60 * 60 * 24);
+
+                if (overdueDays > 0) {
+                    let originalLevel = w.level;
+                    if (overdueDays > 2) w.level = 0;
+                    else if (overdueDays > 1 && w.level > 1) w.level = 1;
+                    else if (w.level === 3) w.level = 2;
+
+                    if (w.level !== originalLevel) {
+                        decayedCount++;
+                        batch.update(doc(db, 'users', AppState.user.uid, 'words', w.id), { level: w.level });
+                        batchCount++;
+                    }
+                }
+            });
+
+            if (batchCount > 0) {
+                await batch.commit();
+                setTimeout(() => {
+                    UI.toast(`雲端同步：${decayedCount} 個單字因未複習而降級`);
+                }, 2000);
+                if (!document.getElementById('view-list').classList.contains('hidden')) {
+                    UI.renderList(document.getElementById('list-search').value);
+                }
+            }
+            return decayedCount;
+        },
+
+        importCSV: async (text) => {
+             // CSV Parser (Same logic)
+             let stats = { added: 0, skipped: 0, invalid: 0 };
+             const parseLine = (line) => {
+                 const looksLikeCSV = line.includes('","') || (line.trim().startsWith('"') && line.trim().endsWith('"'));
+                 if (!looksLikeCSV && line.includes('\t')) { return line.split('\t').map(s => s.trim().replace(/^"|"$/g, '').replace(/""/g, '"')); }
+                 const row = []; let current = ''; let inQuote = false;
+                 for (let i = 0; i < line.length; i++) {
+                     const c = line[i];
+                     if (c === '"') { if (inQuote && line[i+1] === '"') { current += '"'; i++; } else { inQuote = !inQuote; } } 
+                     else if (c === ',' && !inQuote) { row.push(current.trim()); current = ''; } 
+                     else { current += c; }
+                 }
+                 row.push(current.trim()); return row;
+             };
+             const detectPOS = (str) => {
+                 if (!str) return 'n.';
+                 str = str.toLowerCase().replace(/[^a-z]/g, '');
+                 if (str === 'noun' || str === 'n') return 'n.';
+                 if (str === 'verb' || str === 'v') return 'v.';
+                 if (str === 'adjective' || str === 'adj') return 'adj.';
+                 if (str === 'adverb' || str === 'adv') return 'adv.';
+                 if (str === 'phrase' || str === 'phr') return 'phr.';
+                 return 'other';
+             };
+
+             const lines = text.split(/\r?\n/);
+             
+             // Use Batch for bulk add (Max 500 ops per batch)
+             const batch = writeBatch(db);
+             let batchOpCount = 0;
+
+             for(let index=0; index < lines.length; index++) {
+                 const line = lines[index];
+                 if (!line.trim()) continue;
+                 const lineLower = line.toLowerCase();
+                 if (index === 0 && (lineLower.includes('word,pos') || lineLower.includes('"word","pos"'))) continue;
+                 
+                 const p = parseLine(line);
+                 if (p.length < 2) { stats.invalid++; continue; }
+                 
+                 let term = p[0], pos = 'n.', def = '', ex = '', level = 0;
+                 if (p.length >= 5) { pos = detectPOS(p[1]); def = p[2]; ex = p[3]; level = p[4]; } 
+                 else if (p.length === 4) { pos = detectPOS(p[1]); def = p[2]; ex = p[3]; } 
+                 else if (p.length === 3) {
+                     const det = detectPOS(p[1]);
+                     if (det !== 'other' || p[1].length < 6) { pos = det; def = p[2]; } else { def = p[1]; ex = p[2]; }
+                 } else { def = p[1]; }
+                 
+                 if (term && def) {
+                     if (!AppState.words.some(w => w.term.toLowerCase() === term.toLowerCase() && w.def === def)) {
+                         // Prepare data for Cloud
+                         const now = Date.now();
+                         const id = now + Math.random().toString(36).substr(2, 5) + index; // Ensure unique ID in loop
+                         const newWord = { id, term, pos, def, ex, level: parseInt(level)||0, timestamp: now, lastReview: now, interval: 1 };
+                         
+                         batch.set(doc(db, 'users', AppState.user.uid, 'words', id), newWord);
+                         AppState.words.unshift(newWord); // Update local instantly
+                         batchOpCount++;
+                         stats.added++;
+
+                         if(batchOpCount >= 450) { // Firestore limit safety
+                             await batch.commit();
+                             batchOpCount = 0;
+                         }
+                     } else { stats.skipped++; }
+                 } else { stats.invalid++; }
+             }
+             
+             if(batchOpCount > 0) await batch.commit();
+             return stats;
+        },
+
+        fetchWordData: async (word) => {
+            if (!AppState.ai.apiKey) { alert("請填入 API Key"); return null; }
+
+            // --- 防呆處理開始 ---
+            // 1. 確保模型名稱不包含重複的 'models/'
+            let modelName = AppState.ai.model || "gemini-pro";
+            if (modelName.startsWith("models/")) {
+                modelName = modelName.replace("models/", "");
+            }
+            
+            // 2. 建構正確的 URL (注意 v1beta)
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${AppState.ai.apiKey}`;
+            // --- 防呆處理結束 ---
+
+            const prompt = `
+                You are an English vocabulary dictionary. 
+                Word: "${word}".
+                Output JSON only: {"pos":"词性","def":"繁體中文定義","ex":"Example sentence"}
+            `;
+
+            try {
+                UI.toast(`AI 查詢中 (${modelName})...`);
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    console.error("AI API Error Detail:", err); // 詳細錯誤會印在 Console
+                    alert(`API 請求失敗 (${response.status}):\n${err.error?.message || response.statusText}`);
+                    return null;
+                }
+
+                const data = await response.json();
+                // 解析邏輯維持原樣...
+                let text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+                return JSON.parse(text);
+
+            } catch (e) {
+                console.error("Fetch Error:", e);
+                alert("網路請求錯誤，請看 Console");
+                return null;
+            }
+        },
+    };
+
+    // --- 4. UTILS (維持原樣) ---
+    const Utils = {
+        t: (k) => TRANSLATIONS[AppState.settings.lang][k] || k,
+        speak: (text, e, rate = 1.0, onEnd = null) => {
+            if (e) e.stopPropagation();
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'en-US';
+            u.rate = parseFloat(rate);
+            if (onEnd) u.onend = onEnd;
+            speechSynthesis.speak(u);
+        },
+        speakCurrent: (e) => {
+            if (e) e.stopPropagation();
+            const w = AppState.review.queue[AppState.review.index];
+            const term = w.entries ? w.entries[0].term : w.term;
+            if (term) Utils.speak(term);
+        },
+        getSentence: (index, tokens) => {
+            if (!tokens || index < 0 || index >= tokens.length) return "";
+            const ends = ['.', '?', '!', '\n'];
+            let start = index;
+            while (start > 0) {
+                const t = tokens[start];
+                if (ends.some(e => t.includes(e))) { start++; break; }
+                start--;
+            }
+            let end = index;
+            while (end < tokens.length) {
+                const t = tokens[end];
+                if (ends.some(e => t.includes(e))) { break; }
+                end++;
+            }
+            return tokens.slice(start, end + 1).join('').trim();
+        }
+    };
+
+    // --- 5. UI (維持原樣，但需要在 updateSettings 時呼叫 Core.saveSettings) ---
+    const UI = {
+        init: () => {
+            UI.applySettings();
+            UI.renderCalendar();
+            UI.updateStats();
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#word-popup') && !e.target.classList.contains('reader-word')) {
+                    UI.reader.hidePopup();
+                    if (AppState.reader.isPlaying && window.speechSynthesis.paused) {
+                        window.speechSynthesis.resume();
+                    }
+                }
+            });
+            Controller.forms.appendDefinition('add-definitions-container');
+        },
+        show: (id) => {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            UI.reader.hidePopup(); 
+            Controller.reader.stopArticle();
+            if (id === 'view-list') UI.renderList();
+            if (id === 'view-stats') UI.renderCalendar();
+        },
+        toast: (keyOrMsg) => {
+            const el = document.getElementById('toast');
+            const t = TRANSLATIONS[AppState.settings.lang];
+            const msg = t[keyOrMsg] || keyOrMsg;
+            document.getElementById('toast-msg').innerText = msg;
+            el.classList.remove('opacity-0', 'translate-y-[-20px]');
+            el.style.transform = 'translate(-50%, 0)';
+            el.style.opacity = '1';
+            setTimeout(() => {
+                el.style.transform = 'translate(-50%, -20px)';
+                el.style.opacity = '0';
+            }, 3000);
+        },
+        applySettings: () => {
+            const s = AppState.settings;
+            document.documentElement.classList.toggle('dark', s.darkMode);
+            document.getElementById('toggle-dark-mode').checked = s.darkMode;
+            document.body.classList.toggle('theme-simple', s.themeStyle === 'simple');
+            document.getElementById('toggle-basic-mode').checked = s.basicMode;
+            document.getElementById('toggle-merge-review').checked = s.mergeReview;
+            if(document.getElementById('review-limit-select')) document.getElementById('review-limit-select').value = s.reviewLimit || 30;
+            
+            const glassBtn = document.getElementById('btn-theme-glass'), simpleBtn = document.getElementById('btn-theme-simple');
+            if (glassBtn) {
+                const active = 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm';
+                const inactive = 'text-gray-500';
+                glassBtn.className = `px-3 py-1.5 rounded-md text-xs font-bold transition ${s.themeStyle === 'glass' ? active : inactive}`;
+                simpleBtn.className = `px-3 py-1.5 rounded-md text-xs font-bold transition ${s.themeStyle === 'simple' ? active : inactive}`;
+            }
+            const t = TRANSLATIONS[s.lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => el.innerText = t[el.getAttribute('data-i18n')] || el.getAttribute('data-i18n'));
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => el.placeholder = t[el.getAttribute('data-i18n-placeholder')]);
+            document.getElementById('lang-zh').classList.toggle('bg-indigo-50', s.lang === 'zh');
+            document.getElementById('lang-en').classList.toggle('bg-indigo-50', s.lang === 'en');
+        },
+        updateStats: () => {
+            document.getElementById('total-count').innerText = AppState.words.length;
+            const c = [0, 0, 0, 0];
+            AppState.words.forEach(w => c[w.level || 0]++);
+            [0, 1, 2, 3].forEach(i => document.getElementById(`stat-lvl-${i}`).innerText = c[i]);
+            const rate = AppState.words.length ? (c[3] + c[2] * 0.5) / AppState.words.length : 0;
+            const circle = document.getElementById('progress-circle');
+            if (circle) circle.style.strokeDashoffset = 283 - (rate * 283);
+        },
+        renderList: (q = '') => {
+            const term = q.toLowerCase();
+            const filtered = AppState.words.filter(w => w.term.toLowerCase().includes(term) || w.def.includes(term));
+            
+            const groups = {};
+            filtered.forEach(w => {
+                const key = w.term.toLowerCase();
+                if(!groups[key]) groups[key] = [];
+                groups[key].push(w);
+            });
+            
+            const uniqueTerms = Object.keys(groups);
+            document.getElementById('list-count').innerText = uniqueTerms.length;
+            const container = document.getElementById('word-list-container');
+            const mode = AppState.settings.listViewMode;
+            const basic = AppState.settings.basicMode;
+            
+            // 更新按鈕狀態 (這部分維持原樣)
+            document.getElementById('btn-view-grid').className = `p-1.5 rounded-md transition ${mode === 'grid' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500'}`;
+            document.getElementById('btn-view-list').className = `p-1.5 rounded-md transition ${mode === 'list' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500'}`;
+
+            if (!uniqueTerms.length) { container.innerHTML = `<div class="col-span-full text-center mt-20 text-gray-400">Nothing found</div>`; return; }
+
+            // --- 修正開始 ---
+            // 保留 flex-1, overflow-y-auto 等關鍵類別，並根據模式追加 grid 或 spacing
+            const baseClass = "flex-1 overflow-y-auto custom-scrollbar p-4"; // 這裡稍微加一點 p-4 讓邊緣好看點
+            
+            if (mode === 'grid') {
+                container.className = `${baseClass} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20`;
+                container.innerHTML = uniqueTerms.map(term => UI.Templates.gridItem(groups[term], basic)).join('');
+            } else {
+                container.className = `${baseClass} space-y-0 pb-20`;
+                container.innerHTML = `<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    ${UI.Templates.listHeader()}
+                    ${uniqueTerms.map(term => UI.Templates.listItem(groups[term])).join('')}
+                </div>`;
+            }
+            // --- 修正結束 ---
+        },
+        renderCalendar: () => {
+            const y = AppState.calDate.getFullYear(), m = AppState.calDate.getMonth();
+            document.getElementById('calendar-month-year').innerText = `${y} / ${m + 1}`;
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            const firstDay = new Date(y, m, 1).getDay();
+            const days = new Date(y, m + 1, 0).getDate();
+            for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
+
+            let mAdd = 0, mRev = 0;
+            for (let d = 1; d <= days; d++) {
+                const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const st = AppState.dailyStats[ds] || { added: 0, reviewed: 0 };
+                mAdd += st.added; mRev += st.reviewed;
+                grid.innerHTML += UI.Templates.calCell(d, st);
+            }
+            document.getElementById('month-added-count').innerText = mAdd;
+            document.getElementById('month-reviewed-count').innerText = mRev;
+            
+            const today = new Date().toISOString().split('T')[0];
+            const tStat = AppState.dailyStats[today] || { added: 0, reviewed: 0 };
+            document.getElementById('today-added-count').innerText = tStat.added;
+            document.getElementById('today-reviewed-count').innerText = tStat.reviewed;
+
+            // SRS Stats logic ... (Same as before)
+            // ... (省略部分 UI 渲染程式碼，請保持原樣) ...
+        },
+        changeMonth: (d) => { AppState.calDate.setMonth(AppState.calDate.getMonth() + d); UI.renderCalendar(); },
+        
+        reader: {
+            renderArticleList: () => {
+                const container = document.getElementById('articles-container');
+                const empty = document.getElementById('empty-articles');
+                if (AppState.articles.length === 0) {
+                    container.innerHTML = ''; empty.classList.remove('hidden'); return;
+                }
+                empty.classList.add('hidden');
+                container.innerHTML = AppState.articles.map(a => `
+                    <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition cursor-pointer group relative" onclick="Controller.nav.reader('${a.id}')">
+                        <h3 class="font-bold text-lg text-gray-800 dark:text-white mb-2 pr-8 truncate">${a.title}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">${a.excerpt}</p>
+                        <div class="mt-4 flex justify-between items-center text-xs text-gray-400">
+                            <span>${new Date(a.timestamp).toLocaleDateString()}</span>
+                            <span class="group-hover:text-blue-500 transition font-bold">Read <i class="fas fa-arrow-right ml-1"></i></span>
+                        </div>
+                        <button onclick="event.stopPropagation(); Controller.reader.deleteArticle('${a.id}')" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 p-1 transition"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                `).join('');
+            },
+            // ... (Reader 相關 UI 邏輯保持原樣，僅需注意 hidePopup 等) ...
+            renderContent: (articleId) => {
+                // ... (內容同上個版本，省略以節省長度，請複製原檔) ...
+                // 必須完整複製原檔的 reader.renderContent, showPopup, hidePopup 等
+                 const article = AppState.articles.find(a => a.id === articleId);
+                if (!article) return;
+                
+                document.getElementById('reader-title').innerText = article.title;
+                const body = document.getElementById('reader-body');
+                const isHighlight = AppState.settings.articleHighlight;
+                
+                const btnHighlight = document.getElementById('btn-toggle-highlight');
+                if (isHighlight) {
+                    body.classList.add('highlight-on');
+                    btnHighlight.className = "px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400";
+                } else {
+                    body.classList.remove('highlight-on');
+                    btnHighlight.className = "px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700";
+                }
+
+                AppState.currentTokens = article.content.split(/([^a-zA-Z0-9'-]+)/);
+                
+                const html = AppState.currentTokens.map((token, index) => {
+                    if (/^[a-zA-Z][a-zA-Z0-9'-]*$/.test(token)) {
+                        const lower = token.toLowerCase();
+                        const wordEntries = AppState.words.filter(w => w.term.toLowerCase() === lower);
+                        let classes = "reader-word";
+                        if (wordEntries.length > 0) {
+                            const minLevel = Math.min(...wordEntries.map(w => w.level || 0));
+                            classes += ` word-lvl-${minLevel}`;
+                        }
+                        return `<span class="${classes}" onclick="Controller.reader.clickWord(this, '${token}', ${index})">${token}</span>`;
+                    }
+                    return token.replace(/\n/g, '<br>'); 
+                }).join('');
+                
+                body.innerHTML = html;
+            },
+            showPopup: (rect, word, knownEntries, contextSentence) => {
+                if (AppState.reader.isPlaying) window.speechSynthesis.pause();
+                const popup = document.getElementById('word-popup');
+                const pKnown = document.getElementById('popup-known');
+                const pNew = document.getElementById('popup-new');
+                
+                document.getElementById('popup-word').innerText = word;
+                
+                if (knownEntries && knownEntries.length > 0) {
+                    pKnown.classList.remove('hidden');
+                    pNew.classList.add('hidden');
+                    
+                    const defsHtml = knownEntries.map(w => 
+                        `<div class="border-l-2 border-indigo-200 dark:border-indigo-800 pl-2">
+                            <div class="flex items-center gap-1"><span class="text-xs font-bold text-indigo-500">${w.pos}</span> <span class="font-bold">${w.def}</span></div>
+                            ${w.ex ? `<div class="text-xs text-gray-500 italic mt-1 flex items-start gap-1"><button onclick="Utils.speak('${w.ex.replace(/'/g,"\\'").replace(/"/g,'&quot;')}', event, 1.0)" class="text-indigo-400 hover:text-indigo-600 flex-shrink-0" title="Play"><i class="fas fa-volume-up"></i></button> <span>"${w.ex}"</span></div>` : ''}
+                        </div>`
+                    ).join('');
+                    document.getElementById('popup-defs').innerHTML = defsHtml;
+                    
+                    const avgLvl = Math.round(knownEntries.reduce((a,b)=>a+(b.level||0),0)/knownEntries.length);
+                    const lvlNames = ["陌生", "學習", "熟悉", "精通"];
+                    document.getElementById('popup-level').innerText = lvlNames[avgLvl];
+                    document.getElementById('btn-popup-edit').onclick = () => { UI.reader.hidePopup(); Controller.nav.edit(knownEntries[0].id); };
+                } else {
+                    pKnown.classList.add('hidden');
+                    pNew.classList.remove('hidden');
+                    document.getElementById('popup-input-def').value = '';
+                    AppState.tempSentence = contextSentence || '';
+                    document.getElementById('popup-input-ex').value = AppState.tempSentence;
+                    document.getElementById('popup-input-def').focus();
+                }
+                
+                let top = rect.bottom + 10;
+                let left = rect.left;
+                if (top + 300 > window.innerHeight) top = rect.top - 310;
+                if (left + 320 > window.innerWidth) left = window.innerWidth - 330;
+
+                popup.style.top = `${top}px`;
+                popup.style.left = `${left}px`;
+                popup.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    popup.classList.remove('scale-95', 'opacity-0');
+                    popup.classList.add('scale-100', 'opacity-100');
+                });
+            },
+            hidePopup: () => {
+                const popup = document.getElementById('word-popup');
+                popup.classList.add('scale-95', 'opacity-0');
+                popup.classList.remove('scale-100', 'opacity-100');
+                setTimeout(() => popup.classList.add('hidden'), 200);
+            },
+            updatePlayButton: (isPlaying) => {
+                const btn = document.getElementById('btn-reader-play');
+                if (btn) btn.innerHTML = isPlaying ? '<i class="fas fa-pause text-xs ml-px"></i>' : '<i class="fas fa-play text-xs ml-0.5"></i>';
+            }
+        },
+        Templates: {
+            // ... (Templates 需要完整複製原檔) ...
+             gridItem: (entries, basic) => {
+                const w = entries[0];
+                const colors = { 'n.': 'bg-dict-n', 'v.': 'bg-dict-v', 'adj.': 'bg-dict-adj', 'adv.': 'bg-dict-adv', 'phr.': 'bg-dict-phr', 'other': 'bg-gray-500' };
+                const interval = w.interval || 0;
+                const nextRev = w.nextReview || (Date.now());
+                const daysUntil = Math.ceil((nextRev - Date.now()) / 86400000);
+                let statusText = ""; let statusColor = "text-gray-400";
+                if (interval === 0) { statusText = "New"; }
+                else if (daysUntil <= 0) { statusText = "Due Now!"; statusColor = "text-red-500 font-bold"; }
+                else { statusText = `In ${daysUntil} days`; }
+
+                const defsHtml = entries.map(e => `
+                    <div class="mb-3 border-l-2 ${basic ? 'border-gray-300 dark:border-gray-600' : 'border-transparent'} pl-2">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="${colors[e.pos] || 'bg-gray-500'} text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">${e.pos}</span>
+                            <span class="text-gray-700 dark:text-gray-300 font-medium text-sm">${e.def}</span>
+                            ${basic ? `<button onclick="Utils.speak('${e.def.replace(/'/g,"\\'")}', event)" class="text-gray-400 hover:text-indigo-500"><i class="fas fa-volume-up text-[10px]"></i></button>` : ''}
+                        </div>
+                        ${e.ex ? `<p class="text-xs text-gray-500 dark:text-gray-400 italic">"${e.ex}"</p>` : ''}
+                    </div>
+                `).join('');
+
+                const avgLevel = Math.round(entries.reduce((a,b)=>a+(b.level||0),0)/entries.length);
+                return `<div class="group bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all relative flex flex-col h-full">
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-gray-800 dark:text-gray-100">${w.term}</h3>
+                            <button onclick="Utils.speak('${w.term.replace(/'/g,"\\'")}', event)" class="text-indigo-300 hover:text-indigo-500 text-lg"><i class="fas fa-volume-up"></i></button>
+                        </div>
+                        <div class="max-h-60 overflow-y-auto pr-1">
+                            ${defsHtml}
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <div class="flex justify-between items-center opacity-80">
+                            <div class="flex gap-1" title="Current Level">${[...Array(avgLevel)].map(()=>`<div class="w-1.5 h-1.5 rounded-full bg-green-400"></div>`).join('')}</div>
+                            <div class="text-[10px] font-mono flex flex-col items-end">
+                                <span class="${statusColor}">${statusText}</span>
+                                <span class="text-gray-300" title="Review Interval">IVL: ${interval}d</span>
+                            </div>
+                        </div>
+                        <div class="absolute bottom-4 right-1/2 translate-x-1/2 flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-gray-800 px-2 py-1 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600">
+                            <button onclick="Controller.nav.edit('${w.id}')" class="text-blue-500 hover:bg-blue-50 p-1 rounded"><i class="fas fa-pen text-xs"></i></button>
+                            <button onclick="Controller.data.deleteGroup('${w.term.replace(/'/g,"\\'")}')" class="text-red-500 hover:bg-red-50 p-1 rounded"><i class="fas fa-trash-alt text-xs"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            },
+            listHeader: () => {
+                const t = TRANSLATIONS[AppState.settings.lang];
+                return `<div class="grid grid-cols-12 gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 text-xs font-bold text-gray-500 uppercase">
+                    <div class="col-span-3 pl-2">${t.list_header_word}</div>
+                    <div class="col-span-7">Definitions</div>
+                    <div class="col-span-2 text-right pr-2">${t.list_header_action}</div>
+                </div>`;
+            },
+            listItem: (entries) => {
+                const w = entries[0];
+                const posColors = { 'n.':'text-blue-500', 'v.':'text-pink-500', 'adj.':'text-amber-500', 'adv.':'text-purple-500' };
+                const now = Date.now();
+                const elapsedDays = (now - w.lastReview) / (1000 * 60 * 60 * 24);
+                const stability = w.interval || 1;
+                let retention = Math.max(0, 100 - (elapsedDays / stability * 100));
+                if (now > w.nextReview) retention = 0;
+                let barColor = 'bg-green-400';
+                if (retention < 50) barColor = 'bg-orange-400';
+                if (retention < 20) barColor = 'bg-red-500';
+
+                const defs = entries.map(e => `<div class="flex items-center gap-2 text-sm"><span class="text-xs font-bold w-8 ${posColors[e.pos] || 'text-teal-500'}">${e.pos}</span> <span class="text-gray-700 dark:text-gray-300 truncate">${e.def}</span></div>`).join('');
+
+                return `<div class="grid grid-cols-12 gap-2 p-3 border-b border-gray-100 dark:border-gray-700 last:border-0 items-start hover:bg-gray-50 dark:hover:bg-gray-700/30 transition relative group">
+                    <div class="absolute bottom-0 left-0 h-0.5 ${barColor} transition-all" style="width: ${retention}%; opacity: 0.5;"></div>
+                    <div class="col-span-3 pl-2 font-bold text-gray-800 dark:text-gray-200 flex flex-col">
+                        <div class="flex items-center gap-2">
+                            ${w.term}
+                            <i class="fas fa-volume-up text-xs text-gray-300 hover:text-indigo-500 cursor-pointer" onclick="Utils.speak('${w.term.replace(/'/g,"\\'")}', event)"></i>
+                        </div>
+                        <span class="text-[10px] text-gray-400 font-mono mt-1">IVL: ${w.interval}d</span>
+                    </div>
+                    <div class="col-span-7 space-y-1">${defs}</div>
+                    <div class="col-span-2 flex justify-end gap-2 pr-2">
+                        <button onclick="Controller.nav.edit('${w.id}')" class="text-blue-500 hover:text-blue-700 dark:text-blue-400 p-1"><i class="fas fa-pen"></i></button>
+                        <button onclick="Controller.data.deleteGroup('${w.term.replace(/'/g,"\\'")}')" class="text-red-500 hover:text-red-700 dark:text-red-400 p-1"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>`;
+            },
+            calCell: (d, st) => {
+                const intensity = Math.min((st.added + st.reviewed) / 10, 1);
+                const bg = (st.added + st.reviewed > 0) ? `bg-purple-${Math.ceil(intensity*5)*100} dark:bg-purple-900/${Math.ceil(intensity*8)*10}` : 'bg-gray-50 dark:bg-gray-700/50';
+                return `<div class="h-10 rounded-lg flex flex-col items-center justify-center text-[10px] ${bg} border border-transparent transition hover:scale-110">
+                    <span class="font-bold ${intensity > 0.5 ? 'text-white' : 'text-gray-500'}">${d}</span>
+                    ${st.added || st.reviewed ? `<div class="flex gap-0.5"><div class="w-1 h-1 rounded-full bg-indigo-400"></div></div>` : ''}
+                </div>`;
+            },
+            defBlock: (index, data = {}) => {
+                const { id='', pos='n.', def='', ex='' } = data;
+                return `<div class="def-block p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-gray-200 dark:border-gray-600 relative group" data-index="${index}">
+                    <input type="hidden" class="inp-def-id" value="${id}">
+                    <button onclick="this.closest('.def-block').remove()" class="absolute top-2 right-2 text-red-400 hover:text-red-600 p-1 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-times"></i></button>
+                    <div class="grid grid-cols-3 gap-3 mb-3">
+                        <div class="col-span-1"><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">POS</label><select class="inp-pos w-full p-2 bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-sm"><option value="n." ${pos==='n.'?'selected':''}>n.</option><option value="v." ${pos==='v.'?'selected':''}>v.</option><option value="adj." ${pos==='adj.'?'selected':''}>adj.</option><option value="adv." ${pos==='adv.'?'selected':''}>adv.</option><option value="phr." ${pos==='phr.'?'selected':''}>phr.</option><option value="other" ${pos==='other'?'selected':''}>other</option></select></div>
+                        <div class="col-span-2"><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Definition</label><input type="text" class="inp-def w-full p-2 bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-sm font-medium" value="${def}" placeholder="Meaning"></div>
+                    </div>
+                    <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Example</label><textarea class="inp-ex w-full p-2 bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-sm h-16 resize-none" placeholder="Sentence">${ex}</textarea></div>
+                </div>`;
+            }
+        }
+    };
+
+    // --- 6. CONTROLLER ---
+    const Controller = {
+        init: () => {
+            Core.init();
+            // UI.init() is moved to after auth login
+            document.addEventListener('keydown', Controller.features.handleKey);
+        },
+        nav: {
+            home: () => UI.show('view-home'),
+            settings: () => UI.show('view-settings'),
+            list: () => UI.show('view-list'),
+            stats: () => UI.show('view-stats'),
+            add: () => {
+                UI.show('view-add');
+                document.getElementById('add-word').value = '';
+                const container = document.getElementById('add-definitions-container');
+                container.innerHTML = '';
+                Controller.forms.appendDefinition('add-definitions-container');
+                Controller.forms.switchTab('single');
+            },
+            review: () => {
+                const doMerge = AppState.settings.mergeReview;
+                const limit = parseInt(AppState.settings.reviewLimit) || 30;
+                const filtered = AppState.words.filter(w => AppState.review.filters.includes(w.level || 0));
+                
+                let preparedQueue = [];
+
+                if (doMerge) {
+                    const groups = {};
+                    filtered.forEach(w => {
+                        const k = w.term.toLowerCase();
+                        if(!groups[k]) groups[k] = [];
+                        groups[k].push(w);
+                    });
+                    preparedQueue = Object.values(groups).map(g => ({
+                        entries: g,
+                        lastReview: Math.min(...g.map(i=>i.lastReview)),
+                        minLevel: Math.min(...g.map(i=>i.level||0))
+                    }));
+                } else {
+                    preparedQueue = filtered.map(w => ({
+                        entries: [w],
+                        lastReview: w.lastReview,
+                        minLevel: w.level || 0
+                    }));
+                }
+
+                preparedQueue.sort((a,b) => {
+                    if (a.minLevel !== b.minLevel) return a.minLevel - b.minLevel;
+                    return a.lastReview - b.lastReview;
+                });
+
+                if (preparedQueue.length > limit) {
+                    preparedQueue = preparedQueue.slice(0, limit);
+                }
+
+                AppState.review.queue = preparedQueue;
+
+                if (!AppState.review.queue.length) { UI.toast("沒有符合篩選條件的單字"); return; }
+                AppState.review.index = 0; AppState.review.isFlipped = false;
+                UI.show('view-review');
+                Controller.features.updateReviewFilters();
+                Controller.features.renderCard();
+            },
+            edit: (id) => {
+                UI.show('view-edit');
+                document.getElementById('edit-definitions-container').innerHTML = '';
+                const target = AppState.words.find(w => w.id === id);
+                if (target) {
+                    document.getElementById('edit-word').value = target.term;
+                    const related = AppState.words.filter(w => w.term.toLowerCase() === target.term.toLowerCase());
+                    AppState.editingIds = related.map(r => r.id);
+                    related.forEach((r, idx) => document.getElementById('edit-definitions-container').insertAdjacentHTML('beforeend', UI.Templates.defBlock(idx, r)));
+                }
+            },
+            articlesList: () => {
+                UI.show('view-articles-list');
+                UI.reader.renderArticleList();
+            },
+            articleEdit: (id = null) => {
+                UI.show('view-article-edit');
+                document.getElementById('article-id').value = id || '';
+                if (id) {
+                    const a = AppState.articles.find(art => art.id === id);
+                    document.getElementById('article-form-title').innerText = "Edit Article";
+                    document.getElementById('article-title').value = a.title;
+                    document.getElementById('article-content').value = a.content;
+                } else {
+                    document.getElementById('article-form-title').innerText = "New Article";
+                    document.getElementById('article-title').value = '';
+                    document.getElementById('article-content').value = '';
+                }
+            },
+            reader: (id) => {
+                AppState.currentArticleId = id;
+                UI.show('view-reader');
+                UI.reader.renderContent(id);
+            }
+        },
+        forms: {
+            switchTab: (mode) => {
+                const isSingle = mode === 'single';
+                document.getElementById('input-single-form').classList.toggle('hidden', !isSingle);
+                document.getElementById('input-bulk-form').classList.toggle('hidden', isSingle);
+                document.getElementById('tab-single').className = `flex-1 py-2 rounded-lg text-sm font-bold shadow-sm transition ${isSingle ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white' : 'text-gray-500'}`;
+                document.getElementById('tab-bulk').className = `flex-1 py-2 rounded-lg text-sm font-bold transition ${!isSingle ? 'bg-white dark:bg-gray-600 text-gray-800 dark:text-white shadow-sm' : 'text-gray-500'}`;
+            },
+            saveNew: async () => {
+                const term = document.getElementById('add-word').value.trim();
+                const container = document.getElementById('add-definitions-container');
+                const blocks = container.querySelectorAll('.def-block');
+                if (!term) { UI.toast('msg_empty'); return; }
+                let savedCount = 0;
+                
+                // Need to use for...of loop for async await
+                for (const block of blocks) {
+                    const pos = block.querySelector('.inp-pos').value;
+                    const def = block.querySelector('.inp-def').value.trim();
+                    const ex = block.querySelector('.inp-ex').value.trim();
+                    if (def) {
+                        if (!AppState.words.some(w => w.term.toLowerCase() === term.toLowerCase() && w.def === def)) {
+                            await Core.addWord({ term, pos, def, ex });
+                            savedCount++;
+                        }
+                    }
+                }
+                
+                if (savedCount > 0) {
+                    UI.toast('msg_saved');
+                    document.getElementById('add-word').value = '';
+                    container.innerHTML = '';
+                    Controller.forms.appendDefinition('add-definitions-container');
+                    document.getElementById('add-word').focus();
+                } else {
+                    UI.toast('msg_empty');
+                }
+            },
+            addBulk: async () => {
+                const result = await Core.importCSV(document.getElementById('inp-bulk-text').value);
+                if (result.added > 0) {
+                    UI.toast(`Added: ${result.added}, Skipped: ${result.skipped}`);
+                    document.getElementById('inp-bulk-text').value = '';
+                    Controller.nav.list();
+                } else if (result.skipped > 0) {
+                    UI.toast(`No new words. Skipped ${result.skipped} duplicates.`);
+                } else {
+                    UI.toast('No valid data found (Check format)');
+                }
+            },
+            appendDefinition: (containerId) => {
+                const container = document.getElementById(containerId);
+                if(container) container.insertAdjacentHTML('beforeend', UI.Templates.defBlock(Date.now(), { id: '' }));
+            },
+            saveEdited: async () => {
+                const term = document.getElementById('edit-word').value.trim();
+                const blocks = document.querySelectorAll('#edit-definitions-container .def-block');
+                if (!term || !blocks.length) { UI.toast('msg_empty'); return; }
+                
+                const currentIds = [];
+                for (const block of blocks) {
+                    const id = block.querySelector('.inp-def-id').value;
+                    const pos = block.querySelector('.inp-pos').value;
+                    const def = block.querySelector('.inp-def').value.trim();
+                    const ex = block.querySelector('.inp-ex').value.trim();
+                    if (def) {
+                        if (id) { 
+                             await Core.updateWord(id, { term, pos, def, ex }); 
+                             currentIds.push(id); 
+                        }
+                        else if (!AppState.words.some(w => w.term.toLowerCase() === term.toLowerCase() && w.def === def)) { 
+                             await Core.addWord({ term, pos, def, ex }); 
+                        }
+                    }
+                }
+                
+                // Delete removed definitions
+                for (const oldId of AppState.editingIds) {
+                     if (!currentIds.includes(oldId)) await Core.deleteWord(oldId);
+                }
+
+                UI.toast('msg_updated');
+                Controller.nav.list();
+            }
+        },
+        data: {
+             importJSON: async (input) => {
+                const file = input.files[0];
+                if (!file) return;
+                const r = new FileReader();
+                r.onload = async (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        let wCount = 0, aCount = 0;
+                        const batch = writeBatch(db);
+                        let ops = 0;
+
+                        // Restore Stats
+                        if(data.vocab_stats) {
+                             AppState.dailyStats = { ...AppState.dailyStats, ...data.vocab_stats };
+                             batch.set(doc(db, 'users', AppState.user.uid, 'data', 'stats'), AppState.dailyStats);
+                             ops++;
+                        }
+
+                        // Restore Words
+                        if (data.vocab_data && Array.isArray(data.vocab_data)) {
+                            const currentIds = new Set(AppState.words.map(w => w.id));
+                            for (const w of data.vocab_data) {
+                                if (!currentIds.has(w.id)) {
+                                    batch.set(doc(db, 'users', AppState.user.uid, 'words', w.id), w);
+                                    AppState.words.unshift(w);
+                                    wCount++; ops++;
+                                    if(ops >= 450) { await batch.commit(); ops = 0; }
+                                }
+                            }
+                        }
+
+                        // Restore Articles
+                        if (data.article_data && Array.isArray(data.article_data)) {
+                             const currentArtIds = new Set(AppState.articles.map(a => a.id));
+                             for (const a of data.article_data) {
+                                 if (!currentArtIds.has(a.id)) {
+                                     batch.set(doc(db, 'users', AppState.user.uid, 'articles', a.id), a);
+                                     AppState.articles.unshift(a);
+                                     aCount++; ops++;
+                                     if(ops >= 450) { await batch.commit(); ops = 0; }
+                                 }
+                             }
+                        }
+
+                        if(ops > 0) await batch.commit();
+
+                        UI.updateStats();
+                        UI.toast(`匯入成功: ${wCount} 單字, ${aCount} 文章`);
+                        if (!document.getElementById('view-list').classList.contains('hidden')) UI.renderList();
+                    } catch (err) {
+                        console.error(err);
+                        UI.toast("格式錯誤");
+                    }
+                };
+                r.readAsText(file);
+                input.value = '';
+            },
+            exportJSON: () => {
+                // Same export logic
+                const bundle = {
+                    vocab_data: AppState.words,
+                    article_data: AppState.articles,
+                    vocab_stats: AppState.dailyStats,
+                    settings: AppState.settings,
+                    exportedAt: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `vocab_backup_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            },
+            importTXT: (input) => {
+                const file = input.files[0];
+                if (!file) return;
+                const r = new FileReader();
+                r.onload = async (e) => {
+                    const content = e.target.result;
+                    const title = file.name.replace(/\.[^/.]+$/, "");
+                    if (content && title) {
+                        await Core.addArticle(title, content);
+                        UI.toast(`已匯入書籍: ${title}`);
+                        Controller.nav.articlesList();
+                    } else {
+                        UI.toast("檔案內容為空");
+                    }
+                };
+                r.readAsText(file);
+                input.value = '';
+            },
+            clearAll: async () => { 
+                if (confirm("確定要清空雲端與本地所有資料嗎？此操作無法復原。")) { 
+                    // Delete subcollections manually via loop (Client SDK cannot delete collection)
+                    // Words
+                    const batch = writeBatch(db);
+                    AppState.words.forEach(w => batch.delete(doc(db, 'users', AppState.user.uid, 'words', w.id)));
+                    AppState.articles.forEach(a => batch.delete(doc(db, 'users', AppState.user.uid, 'articles', a.id)));
+                    batch.delete(doc(db, 'users', AppState.user.uid, 'data', 'stats'));
+                    
+                    await batch.commit();
+                    AppState.words = [];
+                    AppState.articles = [];
+                    AppState.dailyStats = {};
+                    UI.updateStats();
+                    UI.renderList();
+                    UI.toast("資料已清空");
+                } 
+            },
+            deleteGroup: async (term) => { 
+                if (confirm(`刪除 "${term}" 的所有釋義?`)) { 
+                    await Core.deleteGroup(term); 
+                    UI.renderList(document.getElementById('list-search').value); 
+                } 
+            },
+            exportArticles: () => {
+                const data = AppState.articles;
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `articles_backup_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        },
+        settings: {
+            toggleDarkMode: async (v) => { AppState.settings.darkMode = v; await Core.saveSettings(); UI.applySettings(); },
+            setThemeStyle: async (s) => { AppState.settings.themeStyle = s; await Core.saveSettings(); UI.applySettings(); },
+            setLanguage: async (l) => { AppState.settings.lang = l; await Core.saveSettings(); UI.applySettings(); },
+            toggleBasicMode: async (v) => { AppState.settings.basicMode = v; await Core.saveSettings(); UI.applySettings(); UI.renderList(); },
+            toggleMergeReview: async (v) => { AppState.settings.mergeReview = v; await Core.saveSettings(); UI.applySettings(); },
+            setReviewLimit: async (v) => { AppState.settings.reviewLimit = parseInt(v); await Core.saveSettings(); UI.applySettings(); }
+        },
+        features: {
+            toggleListViewMode: async (m) => { AppState.settings.listViewMode = m; await Core.saveSettings(); UI.renderList(document.getElementById('list-search').value); },
+            handleSearch: (val) => {
+                const res = document.getElementById('home-search-results');
+                if (!val.trim()) { res.classList.add('hidden'); return; }
+                const found = AppState.words.filter(w => w.term.toLowerCase().includes(val.toLowerCase())).slice(0, 5);
+                res.innerHTML = found.length ? found.map(w => `<div class="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b dark:border-gray-700" onclick="Controller.nav.edit('${w.id}')"><div class="font-bold text-gray-800 dark:text-white">${w.term}</div><div class="text-xs text-gray-500">${w.def}</div></div>`).join('') : '';
+                res.classList.toggle('hidden', !found.length);
+            },
+            flipCard: () => {
+                document.getElementById('flashcard-container').classList.toggle('flipped');
+                AppState.review.isFlipped = !AppState.review.isFlipped;
+            },
+            setRate: async (rating, e) => {
+                if (e) e.stopPropagation();
+                const item = AppState.review.queue[AppState.review.index];
+                if (!item || !item.entries) return;
+
+                // 取得 Firestore 的 batch 實例
+                const batch = writeBatch(db);
+
+                item.entries.forEach(word => {
+                    const now = Date.now();
+                    let currentInterval = word.interval || 0;
+                    // 預設 Ease Factor 為 2.5 (Anki 標準起始值)
+                    let easeFactor = word.easeFactor || 2.5; 
+                    let newInterval = 1;
+
+                    // --- SM-2 演算法變體邏輯 ---
+                    
+                    if (rating <= 1) {
+                        // [0:陌生, 1:學習] -> 視為忘記或答錯
+                        newInterval = 1;
+                        
+                        // 懲罰：降低 EF 值，最低不低於 1.3
+                        // 0 (陌生) 扣比較多，1 (學習) 扣比較少
+                        easeFactor = Math.max(1.3, easeFactor - (rating === 0 ? 0.2 : 0.15));
+                    } else {
+                        // [2:熟悉, 3:精通] -> 視為答對
+                        if (currentInterval === 0) {
+                            // 第一次答對
+                            newInterval = 1;
+                        } else if (currentInterval === 1) {
+                            // 第二次答對，固定為 6 天 (或是 3 天，視個人偏好)
+                            newInterval = 3; 
+                        } else {
+                            // 之後依照 EF 值進行指數增長
+                            // 如果是 3 (精通)，給予額外 1.3 倍的獎勵 (Easy Bonus)
+                            const bonus = (rating === 3) ? 1.3 : 1.0;
+                            newInterval = Math.ceil(currentInterval * easeFactor * bonus);
+                        }
+
+                        // 獎勵：如果是精通，提升 EF 值；如果是熟悉，微調或不變
+                        if (rating === 3) {
+                            easeFactor = Math.min(5.0, easeFactor + 0.15);
+                        }
+                    }
+
+                    // --- 計算新的 Level (用於 UI 顏色顯示) ---
+                    // 根據天數動態決定顏色，不再依賴固定索引
+                    let newLevel = 0;
+                    if (newInterval >= 60) newLevel = 3;      // 精通 (綠)
+                    else if (newInterval >= 14) newLevel = 2; // 熟悉 (藍)
+                    else if (newInterval >= 3) newLevel = 1;  // 學習 (橘)
+                    else newLevel = 0;                        // 陌生 (紅)
+
+                    const updateData = { 
+                        level: newLevel, 
+                        interval: newInterval, 
+                        easeFactor: parseFloat(easeFactor.toFixed(2)), // 儲存 EF 值
+                        lastReview: now, 
+                        nextReview: now + (newInterval * 86400000) 
+                    };
+                    
+                    // Add to batch
+                    batch.update(doc(db, 'users', AppState.user.uid, 'words', word.id), updateData);
+                    
+                    // Update Local State
+                    const localIdx = AppState.words.findIndex(w => w.id === word.id);
+                    if(localIdx > -1) {
+                        AppState.words[localIdx] = { ...AppState.words[localIdx], ...updateData };
+                    }
+                });
+
+                await batch.commit(); // Send to cloud
+                await Core.recordActivity('reviewed'); 
+                
+                // UI 更新邏輯 (維持原樣)
+                AppState.review.index++;
+                if (AppState.review.isFlipped) { 
+                    setTimeout(() => { 
+                        Controller.features.renderCard(); 
+                        document.getElementById('flashcard-container').classList.remove('flipped'); 
+                        AppState.review.isFlipped = false; 
+                    }, 200); 
+                } else {
+                    Controller.features.renderCard();
+                }
+            },
+            renderCard: () => {
+                const q = AppState.review.queue, idx = AppState.review.index;
+                if (idx >= q.length) { if (confirm("Complete! Restart?")) Controller.nav.review(); else Controller.nav.home(); return; }
+                const item = q[idx]; const entries = item.entries; const mainWord = entries[0];
+                if (AppState.review.isFlipped) { document.getElementById('flashcard-container').classList.remove('flipped'); AppState.review.isFlipped = false; }
+                document.getElementById('card-word').innerText = mainWord.term;
+                document.getElementById('card-back-word').innerText = mainWord.term;
+                const basic = AppState.settings.basicMode;
+                const colors = { 'n.': 'bg-dict-n', 'v.': 'bg-dict-v', 'adj.': 'bg-dict-adj', 'adv.': 'bg-dict-adv', 'phr.': 'bg-dict-phr', 'other': 'bg-gray-500' };
+                const backHtml = entries.map(w => {
+                    const bg = colors[w.pos] || 'bg-gray-500';
+                    const ttsBtn = basic ? `<button onclick="Utils.speak('${w.def.replace(/'/g,"\\'")}', event)" class="ml-2 text-gray-400 hover:text-indigo-500"><i class="fas fa-volume-up text-sm"></i></button>` : '';
+                    const exTtsBtn = basic && w.ex ? `<button onclick="Utils.speak('${w.ex.replace(/'/g,"\\'")}', event)" class="ml-2 text-gray-400 hover:text-indigo-500"><i class="fas fa-volume-up text-sm"></i></button>` : '';
+                    return `<div class="mb-4 border-b border-gray-100 dark:border-gray-700 pb-4 last:border-0 last:pb-0"><div class="mb-2"><span class="${bg} text-white px-3 py-1 rounded-full text-sm font-bold shadow-sm uppercase">${w.pos}</span></div><div class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2 leading-relaxed">${w.def} ${ttsBtn}</div>${w.ex ? `<div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border-l-4 border-indigo-400 text-gray-600 dark:text-gray-300 italic text-base leading-relaxed">"${w.ex}" ${exTtsBtn}</div>` : ''}</div>`;
+                }).join('');
+                document.getElementById('card-back-content').innerHTML = backHtml;
+                const avgLevel = Math.round(entries.reduce((a,b)=>a+(b.level||0),0)/entries.length);
+                const lvlColors = ['text-red-400', 'text-orange-400', 'text-blue-400', 'text-green-400'];
+                document.getElementById('card-front-status').innerHTML = `<i class="fas fa-circle ${lvlColors[avgLevel]} text-xs"></i>`;
+                document.getElementById('review-progress').innerText = `${idx + 1} / ${q.length}`;
+                const oldestReview = Math.min(...entries.map(e => e.lastReview || 0));
+                const days = Math.floor((Date.now() - oldestReview) / 86400000);
+                document.getElementById('card-last-review').innerText = days === 0 ? 'Today' : `${days}d ago`;
+            },
+            updateReviewFilters: () => {
+                const icons = ['😫','😕','🙂','😎'], colors = ['bg-red-100 text-red-600','bg-orange-100 text-orange-600','bg-blue-100 text-blue-600','bg-green-100 text-green-600'];
+                document.getElementById('filter-container').innerHTML = [0,1,2,3].map(i => `<button onclick="Controller.features.toggleFilter(${i})" class="w-8 h-8 rounded-full text-xs font-bold transition flex items-center justify-center ${AppState.review.filters.includes(i) ? colors[i] : 'bg-gray-100 text-gray-300 grayscale'}">${icons[i]}</button>`).join('');
+            },
+            toggleFilter: (i) => {
+                const f = AppState.review.filters;
+                AppState.review.filters = f.includes(i) ? f.filter(x => x !== i) : [...f, i];
+                Controller.nav.review();
+            },
+            handleKey: (e) => {
+                if (document.getElementById('view-review').classList.contains('hidden')) return;
+                if (e.code === 'Space') { e.preventDefault(); Controller.features.flipCard(); }
+                else if (e.code === 'ArrowRight') { AppState.review.index++; Controller.features.renderCard(); }
+                else if (['Digit1','Digit2','Digit3','Digit4'].includes(e.code)) Controller.features.setRate({'Digit1':0,'Digit2':1,'Digit3':2,'Digit4':3}[e.code]);
+            },
+            timeTravel: (days) => {
+                 UI.toast("時間旅行功能在雲端模式下已停用 (避免破壞資料)");
+            },
+            undoTimeTravel: () => { },
+            autoFill: async () => {
+                    const wordInput = document.getElementById('add-word');
+                    const word = wordInput.value.trim();
+                    if (!word) { UI.toast("請先輸入單字"); return; }
+
+                    const data = await Core.fetchWordData(word);
+                    
+                    if (data) {
+                        // 填入第一個釋義區塊
+                        const container = document.getElementById('add-definitions-container');
+                        // 如果是空的，先清空預設的
+                        const firstBlock = container.querySelector('.def-block');
+                        
+                        if (firstBlock) {
+                            firstBlock.querySelector('.inp-pos').value = data.pos;
+                            firstBlock.querySelector('.inp-def').value = data.def;
+                            firstBlock.querySelector('.inp-ex').value = data.ex;
+                            UI.toast("AI 填寫完成！");
+                        }
+                    }
+                }
+        },
+        reader: {
+            saveArticle: async () => {
+                const id = document.getElementById('article-id').value;
+                const title = document.getElementById('article-title').value.trim();
+                const content = document.getElementById('article-content').value;
+                if (!title || !content) { UI.toast('msg_empty'); return; }
+                if (id) await Core.updateArticle(id, title, content); else await Core.addArticle(title, content);
+                UI.toast('msg_saved'); Controller.nav.articlesList();
+            },
+            deleteArticle: async (id) => { if(confirm("Delete?")) { await Core.deleteArticle(id); UI.reader.renderArticleList(); } },
+            toggleHighlight: async () => {
+                AppState.settings.articleHighlight = !AppState.settings.articleHighlight;
+                await Core.saveSettings();
+                UI.reader.renderContent(AppState.currentArticleId);
+            },
+            clickWord: (el, word, index) => {
+                const rect = el.getBoundingClientRect();
+                const known = AppState.words.filter(w => w.term.toLowerCase() === word.toLowerCase());
+                const sentence = Utils.getSentence(index, AppState.currentTokens);
+                UI.reader.showPopup(rect, word, known, sentence);
+            },
+            quickAdd: async () => {
+                const word = document.getElementById('popup-word').innerText;
+                const def = document.getElementById('popup-input-def').value.trim();
+                const ex = document.getElementById('popup-input-ex').value.trim();
+                if (!def) { UI.toast('msg_empty'); return; }
+                await Core.addWord({ term: word, pos: 'n.', def: def, ex: ex }); 
+                UI.toast('Added!'); UI.reader.hidePopup();
+                UI.reader.renderContent(AppState.currentArticleId);
+            },
+            clearEx: () => { document.getElementById('popup-input-ex').value = ""; },
+            restoreEx: () => { document.getElementById('popup-input-ex').value = AppState.tempSentence || ""; },
+            useSelection: () => {
+                const sel = window.getSelection().toString();
+                if (sel.trim()) { document.getElementById('popup-input-ex').value = sel.trim(); } 
+                else { UI.toast("請先在文章中反白文字"); }
+            },
+            playArticle: () => {
+                const content = document.getElementById('reader-body').innerText;
+                if(!content) return;
+                AppState.reader.isPlaying = true;
+                UI.reader.updatePlayButton(true);
+                Utils.speak(content, null, AppState.reader.speed, () => {
+                    AppState.reader.isPlaying = false;
+                    UI.reader.updatePlayButton(false);
+                });
+            },
+            stopArticle: () => {
+                window.speechSynthesis.cancel();
+                AppState.reader.isPlaying = false;
+                UI.reader.updatePlayButton(false);
+            },
+            togglePlay: () => {
+                if (window.speechSynthesis.speaking) {
+                    if (window.speechSynthesis.paused) {
+                        window.speechSynthesis.resume();
+                        AppState.reader.isPlaying = true;
+                        UI.reader.updatePlayButton(true);
+                    } else {
+                        window.speechSynthesis.pause();
+                        AppState.reader.isPlaying = false; 
+                        UI.reader.updatePlayButton(false);
+                    }
+                } else {
+                    Controller.reader.playArticle();
+                }
+            },
+            setSpeed: (val) => {
+                AppState.reader.speed = parseFloat(val);
+                if (AppState.reader.isPlaying) { Controller.reader.stopArticle(); Controller.reader.playArticle(); }
+            }
+        }
+    };
+
+    // --- Expose to Window for HTML Handlers ---
+    window.Controller = Controller;
+    window.UI = UI;
+    window.Utils = Utils;
+    window.AppState = AppState; // 讓 Console 可以讀取到它
+
+    // Start App
+    Controller.init();
+</script>
+</body>
+</html>
