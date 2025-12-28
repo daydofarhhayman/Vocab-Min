@@ -817,7 +817,20 @@
 
             // 1. Load Settings
             const settingsSnap = await getDoc(doc(db, 'users', uid, 'data', 'settings'));
-            if (settingsSnap.exists()) AppState.settings = { ...AppState.settings, ...settingsSnap.data() };
+            if (settingsSnap.exists()) {
+                const data = settingsSnap.data();
+                
+                // 如果雲端有存 AI 設定，就讀取並同步到 AppState
+                if (data.ai) {
+                    AppState.ai = { ...AppState.ai, ...data.ai };
+                    // 同步回本地 localStorage，以免下次重新整理又要重抓
+                    localStorage.setItem('vocab_ai_key', AppState.ai.apiKey);
+                    localStorage.setItem('vocab_ai_model', AppState.ai.model);
+                    
+                    // 從 data 中移除 ai 屬性，避免汙染到 AppState.settings
+                    delete data.ai; 
+                }
+            }
 
             // 2. Load Stats
             const statsSnap = await getDoc(doc(db, 'users', uid, 'data', 'stats'));
@@ -942,7 +955,12 @@
         // Settings
         saveSettings: async () => {
             if (!AppState.user) return;
-            await setDoc(doc(db, 'users', AppState.user.uid, 'data', 'settings'), AppState.settings);
+            // 將設定與 AI 資料合併存入同一個文件
+            const payload = {
+                ...AppState.settings,
+                ai: AppState.ai 
+            };
+            await setDoc(doc(db, 'users', AppState.user.uid, 'data', 'settings'), payload);
         },
 
         // 遺忘曲線檢查 (批次更新)
@@ -1852,12 +1870,20 @@
                 const key = v.trim();
                 AppState.ai.apiKey = key; 
                 localStorage.setItem('vocab_ai_key', key); 
-                UI.toast("API Key 已儲存"); 
+                
+                // ▼▼▼ 新增這行：同步到雲端 ▼▼▼
+                Core.saveSettings(); 
+                
+                UI.toast("API Key 已儲存並同步"); 
             },
             setAiModel: (v) => { 
                 AppState.ai.model = v; 
                 localStorage.setItem('vocab_ai_model', v); 
-                UI.toast("模型已切換"); 
+                
+                // ▼▼▼ 新增這行：同步到雲端 ▼▼▼
+                Core.saveSettings(); 
+                
+                UI.toast("模型已切換並同步"); 
             },
         },
         features: {
