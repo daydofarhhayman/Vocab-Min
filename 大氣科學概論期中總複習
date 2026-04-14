@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大氣科學概論 | 互動學習與期中考實戰總覽</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            scroll-behavior: smooth;
+        }
+
+        /* 共通 Chart Container 樣式 */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (max-width: 768px) {
+            .chart-container { height: 280px; }
+        }
+
+        /* --- CH8 特屬樣式 --- */
+        .canvas-simulator-8 {
+            width: 100%; max-width: 500px; height: 400px; margin: 0 auto;
+            background-color: #f5f5f4; border-radius: 0.5rem;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        /* --- CH9 & CH14 氣流動畫樣式 --- */
+        .wind-arrow { transition: all 0.5s ease-in-out; }
+        .animate-flow-right { animation: flowRight 2s infinite linear; }
+        .animate-flow-left { animation: flowLeft 2s infinite linear; }
+        .animate-flow-up { animation: flowUp 2s infinite linear; }
+        .animate-flow-down { animation: flowDown 2s infinite linear; }
+        @keyframes flowRight { 0% { transform: translateX(calc(-50% - 30px)); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(calc(-50% + 30px)); opacity: 0; } }
+        @keyframes flowLeft { 0% { transform: translateX(calc(-50% + 30px)); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(calc(-50% - 30px)); opacity: 0; } }
+        @keyframes flowUp { 0% { transform: translateY(20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-20px); opacity: 0; } }
+        @keyframes flowDown { 0% { transform: translateY(-20px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(20px); opacity: 0; } }
+
+        /* --- CH13 特屬樣式 --- */
+        .canvas-container-13 {
+            position: relative; width: 100%; max-width: 800px; margin: 0 auto; height: 400px;
+            background-color: #0f172a; border-radius: 0.75rem; overflow: hidden;
+            box-shadow: inset 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* --- CH14 特屬樣式 --- */
+        .updraft { animation: flowUp 1.5s infinite linear; color: #ef4444; }
+        .downdraft { animation: flowDown 1.5s infinite linear; color: #3b82f6; }
+        #hurricane-canvas, #radar-canvas { width: 100%; height: 100%; }
+        #hurricane-canvas { background: linear-gradient(to bottom, #1e293b 0%, #0f172a 100%); }
+        #radar-canvas { background: #020617; }
+        @keyframes radar-spin { 100% { transform: rotate(360deg); } }
+
+        /* 按鈕 active 狀態 */
+        .scale-btn.active, .tab-btn.active, .stage-btn.active {
+            background-color: #38bdf8; color: white; border-color: #0284c7;
+        }
+        .stage-btn.active { background-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+
+        /* --- 考試系統 Tooltip 與卡片樣式 --- */
+        .term-tooltip {
+            position: relative; display: inline-block; cursor: help;
+            color: #0284c7; font-weight: 700; border-bottom: 2px dashed #38bdf8;
+            transition: all 0.2s; margin: 0 2px;
+        }
+        .term-tooltip:hover {
+            color: #0369a1; background-color: rgba(56, 189, 248, 0.1); border-radius: 2px;
+        }
+        .term-tooltip .tooltip-content {
+            visibility: hidden; opacity: 0; width: 280px; background-color: #0f172a; color: #f8fafc;
+            text-align: left; border-radius: 0.5rem; padding: 14px; position: absolute;
+            z-index: 100; bottom: 130%; left: 50%; transform: translateX(-50%) translateY(10px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.3s, transform 0.3s; font-size: 0.875rem; font-weight: normal;
+            line-height: 1.6; pointer-events: none; border: 1px solid #334155;
+        }
+        .term-tooltip .tooltip-content::after {
+            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -8px;
+            border-width: 8px; border-style: solid; border-color: #0f172a transparent transparent transparent;
+        }
+        .term-tooltip:hover .tooltip-content {
+            visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0);
+        }
+        .tooltip-title {
+            display: block; color: #38bdf8; font-weight: bold; margin-bottom: 6px;
+            border-bottom: 1px solid #334155; padding-bottom: 6px; font-size: 0.95rem;
+        }
+        .q-card { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+        .q-card:hover { transform: translateY(-3px); box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.1); border-color: #94a3b8; }
+        .correct-active { background-color: #ecfdf5 !important; border-left: 4px solid #10b981 !important; font-weight: 600; color: #065f46; }
+        
+        /* Navbar 隱藏滾動條 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- 頂部全局導覽列 -->
+    <nav class="bg-slate-900 text-white sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🌍</span>
+                    <span class="font-bold text-lg tracking-widest hidden md:block">大氣科學概論總覽</span>
+                    <span class="font-bold text-lg tracking-widest md:hidden">AP1001</span>
+                </div>
+                <div class="flex space-x-1 md:space-x-4 overflow-x-auto no-scrollbar items-center">
+                    <button onclick="scrollToSection('ch8')" class="text-slate-300 hover:text-sky-400 px-2 py-2 text-sm font-medium transition whitespace-nowrap">Ch8. 氣壓與風</button>
+                    <button onclick="scrollToSection('ch9')" class="text-slate-300 hover:text-sky-400 px-2 py-2 text-sm font-medium transition whitespace-nowrap">Ch9. 局地風</button>
+                    <button onclick="scrollToSection('ch13')" class="text-slate-300 hover:text-sky-400 px-2 py-2 text-sm font-medium transition whitespace-nowrap">Ch13. 預報</button>
+                    <button onclick="scrollToSection('ch14')" class="text-slate-300 hover:text-sky-400 px-2 py-2 text-sm font-medium transition whitespace-nowrap">Ch14-16. 劇烈天氣</button>
+                    <button onclick="scrollToSection('exam')" class="bg-sky-700 hover:bg-sky-600 text-white px-3 py-1.5 rounded text-sm font-bold transition whitespace-nowrap ml-2">期中考題庫</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 總標頭 -->
+    <header class="bg-gradient-to-br from-slate-800 to-slate-900 py-20 px-4 text-white border-b-4 border-sky-500 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#38bdf8 1px, transparent 1px); background-size: 30px 30px;"></div>
+        <div class="max-w-4xl mx-auto text-center relative z-10">
+            <span class="bg-sky-500/20 text-sky-400 border border-sky-500/30 px-4 py-1 rounded-full text-sm font-bold tracking-wider mb-6 inline-block">AP1001 INTERACTIVE MASTERCLASS</span>
+            <h1 class="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">大氣科學概論 互動學習總覽</h1>
+            <p class="text-lg md:text-xl text-slate-300 leading-relaxed font-light">
+                整合第 8 章至第 16 章核心氣象概念，涵蓋大氣動力學、局地熱力環流、數值天氣預報與劇烈風暴，並附帶完整期中考實戰演練與動態名詞解析。
+            </p>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-32">
+
+        <!-- ==========================================
+             CHAPTER 8: 氣壓與風
+             ========================================== -->
+        <section id="ch8" class="scroll-mt-24 pt-8">
+            <div class="mb-12 text-center">
+                <span class="text-sky-500 font-bold tracking-widest text-sm">CHAPTER 8</span>
+                <h2 class="text-4xl font-extrabold text-slate-800 mt-2">大氣壓力與風的奧秘</h2>
+                <div class="w-24 h-1 bg-sky-500 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <!-- CH8 Content -->
+            <div class="space-y-16">
+                <!-- Diurnal Pressure -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-sky-600 pl-4">1. 氣壓的半日波變化</h3>
+                    <p class="text-slate-600 mb-6 text-lg">地表氣壓在一天之中會有規律的半日波變化（特別在熱帶地區），這與太陽輻射加熱密切相關。</p>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="chart-container"><canvas id="ch8-diurnalChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Coriolis -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-rose-600 pl-4">2. 旋轉地球的魔法：科氏力</h3>
+                    <p class="text-slate-600 mb-6 text-lg">科氏力的大小取決於風速與緯度。風速越快、緯度越高，偏轉的力量就越大；赤道上科氏力為零。</p>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="chart-container"><canvas id="ch8-coriolisChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Wind Vector Simulator -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-emerald-600 pl-4">3. 地面風與高空風受力模擬</h3>
+                    <p class="text-slate-600 mb-6 text-lg">操作下方滑桿，即時觀察氣壓梯度力(PGF)、科氏力(CF)與摩擦力如何共同決定風的最終流向與速度。</p>
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="lg:col-span-4 flex flex-col justify-center space-y-8 bg-slate-50 p-6 rounded-xl border border-slate-100">
+                            <h4 class="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2">控制面板 ⚙️</h4>
+                            <div>
+                                <label class="flex justify-between text-sm font-semibold text-slate-700 mb-2">
+                                    <span>氣壓梯度力 (PGF)</span><span id="ch8-pgfValue" class="text-sky-600 font-bold">強</span>
+                                </label>
+                                <input type="range" id="ch8-pgfSlider" min="1" max="10" value="8" class="w-full accent-sky-500">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-sm font-semibold text-slate-700 mb-2">
+                                    <span>緯度 (影響科氏力)</span><span id="ch8-latValue" class="text-rose-600 font-bold">45°N</span>
+                                </label>
+                                <input type="range" id="ch8-latSlider" min="0" max="90" value="45" class="w-full accent-rose-500">
+                            </div>
+                            <div>
+                                <label class="flex justify-between text-sm font-semibold text-slate-700 mb-2">
+                                    <span>地面摩擦力</span><span id="ch8-fricValue" class="text-emerald-600 font-bold">高空 (無摩擦)</span>
+                                </label>
+                                <input type="range" id="ch8-fricSlider" min="0" max="10" value="0" class="w-full accent-emerald-500">
+                            </div>
+                        </div>
+                        <div class="lg:col-span-8 flex flex-col items-center">
+                            <div class="w-full flex justify-between text-sm font-bold text-rose-600 mb-2 px-4"><span>↑ 低壓區 (L)</span></div>
+                            <canvas id="ch8-vectorCanvas" class="canvas-simulator-8 border border-slate-300"></canvas>
+                            <div class="w-full flex justify-between text-sm font-bold text-sky-600 mt-2 px-4"><span>↓ 高壓區 (H)</span></div>
+                            <div class="mt-6 flex flex-wrap justify-center gap-4 text-sm font-bold">
+                                <div class="flex items-center gap-1"><span class="inline-block w-4 h-1 bg-red-500"></span>PGF</div>
+                                <div class="flex items-center gap-1"><span class="inline-block w-4 h-1 bg-blue-500"></span>科氏力</div>
+                                <div class="flex items-center gap-1"><span class="inline-block w-4 h-1 bg-emerald-500"></span>摩擦力</div>
+                                <div class="flex items-center gap-1"><span class="inline-block w-6 h-2 bg-slate-800 rounded-full"></span>最終風向</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200 border-2 rounded">
+
+        <!-- ==========================================
+             CHAPTER 9: 局地風
+             ========================================== -->
+        <section id="ch9" class="scroll-mt-24 pt-8">
+            <div class="mb-12 text-center">
+                <span class="text-amber-500 font-bold tracking-widest text-sm">CHAPTER 9</span>
+                <h2 class="text-4xl font-extrabold text-slate-800 mt-2">小尺度風與局地系統</h2>
+                <div class="w-24 h-1 bg-amber-500 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="space-y-16">
+                <!-- Scales of Motion -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-sky-500 pl-4">1. 大氣運動的尺度</h3>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex flex-wrap gap-2 mb-6 border-b border-slate-100 pb-4">
+                            <button class="scale-btn active px-4 py-2 rounded-lg font-semibold border hover:bg-sky-50 transition" onclick="updateScale9('micro', this)">微尺度</button>
+                            <button class="scale-btn px-4 py-2 rounded-lg font-semibold border hover:bg-sky-50 transition" onclick="updateScale9('meso', this)">中尺度</button>
+                            <button class="scale-btn px-4 py-2 rounded-lg font-semibold border hover:bg-sky-50 transition" onclick="updateScale9('synoptic', this)">天氣尺度</button>
+                            <button class="scale-btn px-4 py-2 rounded-lg font-semibold border hover:bg-sky-50 transition" onclick="updateScale9('macro', this)">宏觀尺度</button>
+                        </div>
+                        <div class="min-h-[150px] flex flex-col justify-center bg-slate-50 rounded-xl p-6 border border-slate-100">
+                            <h4 id="ch9-scale-title" class="text-2xl font-bold text-sky-600 mb-2">微尺度 (Microscale)</h4>
+                            <p class="text-slate-700 mt-2"><strong class="text-slate-900">📏 範圍與時間：</strong> <span id="ch9-scale-info">直徑約幾公尺（< 2m），數秒到數分鐘</span></p>
+                            <p class="text-slate-700 mt-2"><strong class="text-slate-900">💡 典型實例：</strong> <span id="ch9-scale-examples">小陣風 (gusts)、微小亂流、樹葉間的渦流。</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sea/Land Breeze Simulator -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-amber-500 pl-4">2. 海陸風熱力環流模擬</h3>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-100 px-6 py-4 border-b flex justify-between items-center">
+                            <h4 class="font-bold text-lg text-slate-800">日夜切換</h4>
+                            <div class="flex items-center gap-3">
+                                <span class="text-slate-600 font-medium">☀️ 白天</span>
+                                <button onclick="toggleDayNight9()" class="w-14 h-7 rounded-full relative transition-colors duration-300 focus:outline-none bg-sky-400" id="ch9-toggleBg">
+                                    <div id="ch9-toggleKnob" class="w-5 h-5 bg-white rounded-full absolute top-1 left-1 transition-transform duration-300 transform translateX(0)"></div>
+                                </button>
+                                <span class="text-slate-600 font-medium">🌙 夜晚</span>
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-0">
+                            <div class="relative h-80 bg-sky-50 flex items-end overflow-hidden" id="ch9-simView">
+                                <div id="ch9-sunMoon" class="absolute top-6 left-1/2 transform -translate-x-1/2 text-5xl transition-all duration-500">☀️</div>
+                                <div class="absolute inset-0 flex">
+                                    <div class="w-1/2 h-full flex flex-col justify-end items-center pb-8 z-10">
+                                        <div id="ch9-landP" class="text-red-500 font-bold text-2xl mb-12 bg-white/80 px-3 py-1 rounded">L (低壓)</div>
+                                        <div id="ch9-landT" class="text-slate-800 font-bold">陸地 (升溫快)</div>
+                                    </div>
+                                    <div class="w-1/2 h-full flex flex-col justify-end items-center pb-8 z-10">
+                                        <div id="ch9-seaP" class="text-blue-500 font-bold text-2xl mb-12 bg-white/80 px-3 py-1 rounded">H (高壓)</div>
+                                        <div id="ch9-seaT" class="text-slate-800 font-bold">海洋 (升溫慢)</div>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 z-20 pointer-events-none">
+                                    <div id="ch9-upWind" class="absolute top-1/4 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-flow-right">
+                                        <span class="text-xs text-slate-500 font-bold mb-1">高空風</span><span class="text-3xl text-slate-400 leading-none">→</span>
+                                    </div>
+                                    <div id="ch9-sfcWind" class="absolute bottom-1/3 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-flow-left">
+                                        <span class="text-4xl text-sky-600 font-bold leading-none">←</span><span id="ch9-sfcLabel" class="text-sm text-sky-700 font-bold mt-1">海風 (向陸地)</span>
+                                    </div>
+                                    <div id="ch9-landV" class="absolute bottom-1/3 left-1/4 text-3xl text-red-400 animate-flow-up flex flex-col items-center">
+                                        <span>↑</span><span class="text-xs font-bold mt-1">上升</span>
+                                    </div>
+                                    <div id="ch9-seaV" class="absolute bottom-1/3 right-1/4 text-3xl text-blue-400 animate-flow-down flex flex-col items-center">
+                                        <span>↓</span><span class="text-xs font-bold mt-1">下沉</span>
+                                    </div>
+                                </div>
+                                <div class="w-1/2 h-24 bg-amber-200 border-t-4 border-amber-300" id="ch9-landBlock"></div>
+                                <div class="w-1/2 h-24 bg-blue-300 border-t-4 border-blue-400" id="ch9-seaBlock"></div>
+                            </div>
+                            <div class="p-6 bg-white flex flex-col justify-center border-l">
+                                <h4 id="ch9-simTitle" class="text-2xl font-bold text-sky-600 mb-4">海風 (Sea Breeze)</h4>
+                                <p id="ch9-simDesc" class="text-slate-600 leading-relaxed">白天陸地升溫快形成熱力低壓；海洋升溫慢形成相對高壓。底層風由海洋吹向陸地。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Taiwan Wind Energy & Rose -->
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-4 border-l-4 border-emerald-500 pl-4">3. 台灣離岸風電潛力</h3>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div class="chart-container"><canvas id="ch9-topSitesChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-4 border-l-4 border-purple-500 pl-4">4. 風花圖 (Wind Rose)</h3>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div class="chart-container"><canvas id="ch9-windRoseChart"></canvas></div>
+                            <p class="text-center text-sm text-slate-500 mt-2">顯示該地區盛行風向（如東北季風）</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200 border-2 rounded">
+
+        <!-- ==========================================
+             CHAPTER 13: 天氣預報
+             ========================================== -->
+        <section id="ch13" class="scroll-mt-24 pt-8">
+            <div class="mb-12 text-center">
+                <span class="text-indigo-500 font-bold tracking-widest text-sm">CHAPTER 13</span>
+                <h2 class="text-4xl font-extrabold text-slate-800 mt-2">天氣預報：從觀測到混沌</h2>
+                <div class="w-24 h-1 bg-indigo-500 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="space-y-16">
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <!-- Obs Chart -->
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-4 border-l-4 border-sky-500 pl-4">1. 觀測網資料不均</h3>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div class="chart-container"><canvas id="ch13-obsChart"></canvas></div>
+                        </div>
+                    </div>
+                    <!-- Accuracy Chart -->
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800 mb-4 border-l-4 border-rose-500 pl-4">2. 預報準確率衰減</h3>
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div class="chart-container"><canvas id="ch13-accChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Remote Sensing -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-amber-500 pl-4">3. 遙測技術 (Remote Sensing)</h3>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="flex flex-wrap bg-slate-50 border-b" id="ch13-remoteTabs">
+                            <button class="tab-btn active flex-1 py-4 font-bold hover:bg-sky-50" onclick="switchTab13('vis', this)">可見光</button>
+                            <button class="tab-btn flex-1 py-4 font-bold hover:bg-sky-50" onclick="switchTab13('ir', this)">紅外線</button>
+                            <button class="tab-btn flex-1 py-4 font-bold hover:bg-sky-50" onclick="switchTab13('wv', this)">水氣頻道</button>
+                            <button class="tab-btn flex-1 py-4 font-bold hover:bg-sky-50" onclick="switchTab13('radar', this)">都卜勒雷達</button>
+                        </div>
+                        <div class="p-8 flex items-center">
+                            <div class="text-7xl mr-6" id="ch13-tabIcon">☀️</div>
+                            <div>
+                                <h4 id="ch13-tabTitle" class="text-2xl font-bold text-sky-600 mb-2">可見光衛星雲圖</h4>
+                                <p id="ch13-tabDesc" class="text-slate-700">直接拍攝地球反射的太陽光。雲層越厚在圖上就越白。限制：僅白天可用。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spaghetti Plot Simulator -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-4 border-l-4 border-indigo-500 pl-4">4. 混沌與系集預報 (Ensemble)</h3>
+                    <p class="text-slate-600 mb-6 text-lg">調整初始觀測誤差，觀察「蝴蝶效應」如何導致數值預報路徑（義大利麵圖）發散。</p>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex flex-col md:flex-row items-center mb-6 gap-4">
+                            <div class="flex-1 w-full">
+                                <label class="font-bold text-slate-700 mb-2 block">初始觀測誤差: <span id="ch13-errVal" class="text-indigo-600">中等</span></label>
+                                <input type="range" id="ch13-errSlider" min="0" max="100" value="20" class="w-full accent-indigo-600">
+                            </div>
+                            <button onclick="runEnsemble13()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg">重新運算 🌪️</button>
+                        </div>
+                        <div class="canvas-container-13"><canvas id="ch13-spagCanvas"></canvas></div>
+                        <div class="mt-4 text-center">
+                            <span id="ch13-confBadge" class="px-4 py-2 rounded-full bg-green-100 text-green-800 font-bold text-sm">預報可信度：高</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-slate-200 border-2 rounded">
+
+        <!-- ==========================================
+             CHAPTER 14-16: 劇烈天氣與熱帶氣旋
+             ========================================== -->
+        <section id="ch14" class="scroll-mt-24 pt-8 bg-slate-900 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pb-16">
+            <div class="mb-12 text-center pt-8">
+                <span class="text-red-500 font-bold tracking-widest text-sm">CHAPTER 14-16</span>
+                <h2 class="text-4xl font-extrabold text-white mt-2">劇烈天氣與颱風動力學</h2>
+                <div class="w-24 h-1 bg-red-500 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="space-y-16 max-w-7xl mx-auto">
+                
+                <!-- Thunderstorm Lifecycle -->
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-100 mb-4 border-l-4 border-yellow-500 pl-4">1. 雷雨生命週期</h3>
+                    <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6 flex flex-col lg:flex-row gap-8">
+                        <div class="w-full lg:w-1/3 flex flex-col justify-center space-y-4">
+                            <button class="stage-btn active text-left px-6 py-4 rounded-xl bg-slate-900 border border-slate-700 text-slate-300" onclick="setStormStage14('cumulus', this)"><div class="font-bold">1. 積雲階段</div></button>
+                            <button class="stage-btn text-left px-6 py-4 rounded-xl bg-slate-900 border border-slate-700 text-slate-300" onclick="setStormStage14('mature', this)"><div class="font-bold">2. 成熟階段</div></button>
+                            <button class="stage-btn text-left px-6 py-4 rounded-xl bg-slate-900 border border-slate-700 text-slate-300" onclick="setStormStage14('dissipating', this)"><div class="font-bold">3. 消散階段</div></button>
+                        </div>
+                        <div class="w-full lg:w-2/3 bg-slate-900 rounded-xl relative overflow-hidden flex flex-col items-center justify-end p-4 min-h-[300px]">
+                            <div id="ch14-stormBg" class="absolute inset-0 bg-gradient-to-b from-sky-800 to-slate-700 transition-colors duration-700"></div>
+                            <div class="relative z-10 flex flex-col items-center w-full h-full justify-between pt-8">
+                                <div class="relative">
+                                    <div id="ch14-cloudIcon" class="text-8xl transform scale-75 transition-transform duration-700">☁️</div>
+                                    <div id="ch14-lightning" class="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-4xl text-yellow-400 opacity-0">⚡</div>
+                                </div>
+                                <div class="flex justify-center w-full gap-16 h-24 mt-auto">
+                                    <div id="ch14-updraft" class="flex flex-col items-center"><span class="text-3xl updraft font-bold">↑</span><span class="text-xs text-red-400 font-bold bg-slate-900/80 px-2 rounded">上升</span></div>
+                                    <div id="ch14-downdraft" class="flex flex-col items-center opacity-0"><span class="text-3xl downdraft font-bold">↓</span><span class="text-xs text-blue-400 font-bold bg-slate-900/80 px-2 rounded">下沉</span></div>
+                                </div>
+                                <div class="w-full h-3 bg-green-900/50 mt-2 rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Radar & Hurricanes -->
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <!-- Bow Echo Radar -->
+                    <div>
+                        <h3 class="text-2xl font-bold text-slate-100 mb-4 border-l-4 border-orange-500 pl-4">2. 颮線與弓形回波</h3>
+                        <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6 flex flex-col items-center">
+                            <div class="w-full max-w-[300px] aspect-square relative rounded-full overflow-hidden border-4 border-slate-700">
+                                <canvas id="ch14-radarCanvas" class="absolute inset-0"></canvas>
+                                <div class="absolute inset-0 rounded-full pointer-events-none" style="background: conic-gradient(from 0deg, transparent 70%, rgba(34, 197, 94, 0.4) 100%); animation: radar-spin 4s linear infinite;"></div>
+                                <div class="absolute inset-0 rounded-full border border-green-500/30"></div>
+                                <div class="absolute inset-[25%] rounded-full border border-green-500/30"></div>
+                                <div class="absolute top-1/2 left-0 w-full h-[1px] bg-green-500/30"></div>
+                                <div class="absolute top-0 left-1/2 w-[1px] h-full bg-green-500/30"></div>
+                            </div>
+                            <p class="text-slate-400 text-sm mt-4 text-center">下沉陣風將颮線向外推擠形成弓形，常伴隨破壞性直線強風。</p>
+                        </div>
+                    </div>
+
+                    <!-- Hurricane Simulator -->
+                    <div>
+                        <h3 class="text-2xl font-bold text-slate-100 mb-4 border-l-4 border-red-500 pl-4">3. 颱風物理模擬器</h3>
+                        <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <label class="text-slate-300 text-sm font-bold">海溫 (SST): <span id="ch14-sstVal" class="text-sky-400">24°C</span></label>
+                                <input type="range" id="ch14-sstSlider" min="20" max="32" step="0.5" value="24" class="w-1/2 accent-red-500">
+                            </div>
+                            <div class="relative w-full h-[250px] rounded-xl overflow-hidden border border-slate-700">
+                                <canvas id="ch14-hurrCanvas"></canvas>
+                                <div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-8 text-center pointer-events-none text-xs">
+                                    <div><span class="text-red-400 font-bold bg-slate-900/80 px-1 rounded">眼牆</span></div>
+                                    <div><span class="text-white font-bold bg-slate-900/80 px-2 py-1 rounded">颱風眼</span></div>
+                                    <div><span class="text-red-400 font-bold bg-slate-900/80 px-1 rounded">眼牆</span></div>
+                                </div>
+                                <div id="ch14-hurrStatus" class="absolute top-2 right-2 bg-slate-900/90 px-2 py-1 rounded text-xs font-bold text-slate-400">熱帶擾動</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ==========================================
+             期中考題庫系統
+             ========================================== -->
+        <section id="exam" class="scroll-mt-20 pt-8">
+            <div class="bg-indigo-900 text-white rounded-t-2xl p-8 text-center shadow-lg border-b-4 border-indigo-500 relative overflow-hidden">
+                <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, #fff 10px, #fff 20px);"></div>
+                <h2 class="text-4xl font-extrabold relative z-10">期中考實戰題庫系統</h2>
+                <p class="text-indigo-200 mt-2 relative z-10">完整收錄 30 題選擇與 8 題問答，附帶專有名詞動態解析。</p>
+                <div class="mt-6 flex justify-center gap-4 relative z-10">
+                    <button onclick="toggleAllAnswers(true)" class="bg-white text-indigo-900 px-6 py-2 rounded font-bold shadow hover:bg-indigo-50 transition">👁️ 展開全部詳解</button>
+                    <button onclick="toggleAllAnswers(false)" class="bg-indigo-800 border border-indigo-600 px-6 py-2 rounded font-bold shadow hover:bg-indigo-700 transition">🙈 隱藏全部詳解</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 md:p-10 rounded-b-2xl shadow-lg border border-t-0 border-slate-200">
+                <h3 class="text-2xl font-bold text-slate-800 mb-6 border-b-2 border-slate-100 pb-2">一、 Multiple Choice (60%)</h3>
+                <div id="mc-container" class="space-y-6"></div>
+
+                <h3 class="text-2xl font-bold text-slate-800 mb-6 border-b-2 border-slate-100 pb-2 mt-16">二、 Essay 問答題 (40%)</h3>
+                <div id="essay-container" class="space-y-6"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 py-10 text-center text-slate-400 text-sm border-t border-slate-800">
+        <p class="font-bold text-slate-300 text-lg mb-2">大氣科學概論 (AP1001) 互動學習總覽</p>
+        <p>Built with Tailwind CSS, Chart.js & Vanilla JS | Consolidated SPA</p>
+    </footer>
+
+    <!-- ==========================================
+         JAVASCRIPT LOGIC
+         ========================================== -->
+    <script>
+        // ------------------------------------------------
+        // 共通輔助函式
+        // ------------------------------------------------
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+        function t(term, title, desc) {
+            return `<span class="term-tooltip">${term}<span class="tooltip-content"><span class="tooltip-title">${title}</span>${desc}</span></span>`;
+        }
+
+        Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        Chart.defaults.color = '#64748b';
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ------------------------------------------------
+            // CH8: 氣壓與風
+            // ------------------------------------------------
+            const ctxD = document.getElementById('ch8-diurnalChart').getContext('2d');
+            new Chart(ctxD, {
+                type: 'line',
+                data: { labels: ['10AM', '4PM', '10PM', '4AM', '10AM'], datasets: [
+                    { label: '中緯度', data: [1009, 1014, 1011, 1008, 1009], borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)', borderWidth: 3, fill: true },
+                    { label: '熱帶', data: [1010, 1007.5, 1010, 1007.5, 1010], borderColor: '#e11d48', backgroundColor: 'rgba(225, 29, 72, 0.1)', borderWidth: 3, borderDash: [5,5], fill: true }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 1006, max: 1015 } } }
+            });
+
+            const ctxC = document.getElementById('ch8-coriolisChart').getContext('2d');
+            new Chart(ctxC, {
+                type: 'line',
+                data: { labels: ['0°', '30°', '60°', '90°'], datasets: [
+                    { label: '40 Knots', data: [0, 0.14, 0.25, 0.29], borderColor: '#e11d48', borderWidth: 3 },
+                    { label: '20 Knots', data: [0, 0.07, 0.12, 0.14], borderColor: '#4f46e5', borderWidth: 3 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // CH8 Vector Canvas
+            const vCan = document.getElementById('ch8-vectorCanvas');
+            const vCtx = vCan.getContext('2d');
+            const vSliP = document.getElementById('ch8-pgfSlider'), vSliL = document.getElementById('ch8-latSlider'), vSliF = document.getElementById('ch8-fricSlider');
+            
+            function drawArrow(ctx, x1, y1, x2, y2, color, w=3) {
+                const hl=12, a=Math.atan2(y2-y1, x2-x1);
+                ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle=color; ctx.lineWidth=w; ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-hl*Math.cos(a-Math.PI/6), y2-hl*Math.sin(a-Math.PI/6)); ctx.lineTo(x2-hl*Math.cos(a+Math.PI/6), y2-hl*Math.sin(a+Math.PI/6)); ctx.fillStyle=color; ctx.fill();
+            }
+            function updateV() {
+                vCan.width = vCan.clientWidth; vCan.height = vCan.clientHeight;
+                const cx=vCan.width/2, cy=vCan.height/2+50, w=vCan.width, h=vCan.height;
+                vCtx.clearRect(0,0,w,h);
+                
+                vCtx.strokeStyle='#d6d3d1'; vCtx.lineWidth=2;
+                for(let i=1;i<=3;i++){ vCtx.beginPath(); vCtx.moveTo(0,h*i/4); vCtx.lineTo(w,h*i/4); vCtx.stroke(); }
+                vCtx.beginPath(); vCtx.arc(cx,cy,8,0,2*Math.PI); vCtx.fillStyle='#444'; vCtx.fill();
+
+                let p=parseInt(vSliP.value)*15, l=parseInt(vSliL.value), f=parseInt(vSliF.value);
+                document.getElementById('ch8-pgfValue').textContent = p>100?'強':'中';
+                document.getElementById('ch8-latValue').textContent = l+'°N';
+                document.getElementById('ch8-fricValue').textContent = f===0?'高空':(f>7?'粗糙':'平坦');
+
+                drawArrow(vCtx, cx,cy, cx, cy-p, '#ef4444', 4); // PGF
+                if(l===0) { drawArrow(vCtx, cx,cy, cx, cy-p, '#1c1917', 6); return; }
+
+                let ang = (-90 + f*4) * Math.PI/180;
+                let mag = p * (1-f*0.05);
+                drawArrow(vCtx, cx,cy, cx+mag*Math.cos(ang), cy+mag*Math.sin(ang), '#1c1917', 6); // Wind
+                drawArrow(vCtx, cx,cy, cx+(mag*Math.sin(l*Math.PI/180))*Math.cos(ang+Math.PI/2), cy+(mag*Math.sin(l*Math.PI/180))*Math.sin(ang+Math.PI/2), '#3b82f6', 4); // Cor
+                if(f>0) drawArrow(vCtx, cx,cy, cx+(mag*f*0.08)*Math.cos(ang+Math.PI), cy+(mag*f*0.08)*Math.sin(ang+Math.PI), '#10b981', 4); // Fric
+            }
+            [vSliP, vSliL, vSliF].forEach(s => s.addEventListener('input', updateV));
+            window.addEventListener('resize', updateV);
+            updateV();
+
+            // ------------------------------------------------
+            // CH9: 局地風
+            // ------------------------------------------------
+            const ctxTop = document.getElementById('ch9-topSitesChart').getContext('2d');
+            new Chart(ctxTop, { type:'doughnut', data:{ labels:['台灣海峽','其他'], datasets:[{data:[16,4], backgroundColor:['#0ea5e9','#cbd5e1']}] }, options:{responsive:true, maintainAspectRatio:false, cutout:'65%'} });
+            const ctxRose = document.getElementById('ch9-windRoseChart').getContext('2d');
+            new Chart(ctxRose, { type:'polarArea', data:{ labels:['N','NE','E','SE','S','SW','W','NW'], datasets:[{data:[9,18,5,1,3,4,5,8], backgroundColor:'rgba(14,165,233,0.6)'}] }, options:{responsive:true, maintainAspectRatio:false} });
+
+            // ------------------------------------------------
+            // CH13: 預報
+            // ------------------------------------------------
+            new Chart(document.getElementById('ch13-obsChart').getContext('2d'), {
+                type:'bar', data:{ labels:['地面','高空','海上'], datasets:[{data:[11000,1000,500], backgroundColor:['#38bdf8','#6366f1','#f59e0b']}] },
+                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{type:'logarithmic'}}}
+            });
+            new Chart(document.getElementById('ch13-accChart').getContext('2d'), {
+                type:'line', data:{ labels:['Day 1','Day 3','Day 5','Day 7','Day 10'], datasets:[{data:[95,82,65,40,20], borderColor:'#f43f5e', fill:true, backgroundColor:'rgba(244,63,94,0.1)'}] },
+                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{max:100}}}
+            });
+
+            // ------------------------------------------------
+            // 期中考題庫 Render
+            // ------------------------------------------------
+            const mcqs = [
+                {q:"If two air parcels at sea level have the same size but different temperatures, the colder parcel of air will have", opts:["a. higher pressure, same density", "b. same pressure, lower density", "c. same pressure, higher density", "d. lower pressure, same density"], ans:2, exp:`正解為 <strong>(c)</strong>。<br>在相同氣壓下，溫度越低，空氣分子排列越緊密，${t('密度','密度','D=M/V')}越高。`},
+                {q:"Which of the following instruments measures pressure?", opts:["a. barometer", "b. thermometer", "c. radiometer", "d. hygrometer", "e. densitometer"], ans:0, exp:`正解為 <strong>(a)</strong>。<br>${t('氣壓計 (Barometer)','氣壓計','測量大氣壓力的專屬儀器。')}用來測壓。`},
+                {q:"On an upper-level chart the wind tends to blow", opts:["a. at right angles to isobars", "b. parallel to isobars", "c. at an angle to contours", "d. at constant speed"], ans:1, exp:`正解為 <strong>(b)</strong>。<br>高空無摩擦力，氣壓梯度力與科氏力平衡形成${t('地轉風','地轉風','平行等壓線吹拂的風')}。`},
+                {q:"A ridge on an upper-level isobaric chart indicates", opts:["a. higher-than-average heights", "b. lower-than-average heights", "c. average heights", "d. region with calm winds"], ans:0, exp:`正解為 <strong>(a)</strong>。<br>${t('脊線 (Ridge)','脊線','等高線向極地凸出之處，代表相對高壓。')}高度較高。`},
+                {q:"The force that causes stationary air to begin moving is", opts:["a. Coriolis force", "b. pressure gradient force", "c. centripetal force", "d. frictional force"], ans:1, exp:`正解為 <strong>(b)</strong>。<br>${t('氣壓梯度力','PGF','由高壓指向低壓的原始驅動力。')}是唯一能讓靜止空氣移動的力。`},
+                {q:"We expect air to be ___ above surface low and ___ above surface high.", opts:["a. rising, rising", "b. rising, sinking", "c. sinking, sinking", "d. sinking, rising"], ans:1, exp:`正解為 <strong>(b)</strong>。<br>低壓中心空氣${t('輻合','輻合','水平匯聚')}並上升；高壓中心空氣輻散並下沉。`},
+                {q:"An example of microscale motion is", opts:["a. cyclone", "b. 500 mb winds", "c. city winds", "d. winds blowing past a chimney", "e. global winds"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>煙囪渦流屬於極小的${t('微尺度','微尺度','直徑<2m，維持數秒到數分')}。`},
+                {q:"Thermal turbulence is usually most severe", opts:["a. after sunset", "b. at maximum surface heating", "c. around midnight", "d. before sunrise"], ans:1, exp:`正解為 <strong>(b)</strong>。<br>${t('熱力性亂流','熱力性亂流','地表不均勻受熱產生的對流')}在太陽加熱最強時最劇烈。`},
+                {q:"The howling of wind on a blustery night is caused by", opts:["a. temp variation", "b. frozen surface", "c. snowflakes", "d. eddies of higher air density", "e. lifting objects"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>風吹過障礙物產生的${t('渦流 (Eddies)','渦流','旋轉的小氣流')}造成壓力變化發出聲波。`},
+                {q:"The size and shape of a turbulent eddy depend on", opts:["a. size of obstacle", "b. shape of obstacle", "c. speed of wind", "d. all of the above"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>${t('機械性亂流','機械亂流','受地形地物阻擋產生的擾動')}與障礙物形狀、大小及風速都有關。`},
+                {q:"Most practical location for a wind turbine is", opts:["a. strong, gusty winds", "b. downwind side of mountain", "c. narrow valley", "d. moderate, steady winds"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>風機需要${t('穩定風速','穩定風','陣風會損壞葉片')}，避免亂流與強陣風。`},
+                {q:"Clouds on downwind side of a lake indicate air is", opts:["a. converging and rising", "b. converging and sinking", "c. diverging and sinking", "d. diverging and rising"], ans:0, exp:`正解為 <strong>(a)</strong>。<br>風吹上陸地因摩擦力變慢，後方空氣追撞造成${t('輻合','輻合抬升','水平氣流擠壓迫使向上')}上升成雲。`},
+                {q:"An analysis is", opts:["a. future forecast", "b. past comparison", "c. chart interpreting present weather", "d. long range method"], ans:2, exp:`正解為 <strong>(c)</strong>。<br>${t('分析場 (Analysis)','分析場','基於觀測資料分析「當下」大氣狀態的圖。')}。Prog才是未來的預報圖。`},
+                {q:"Immediate future forecast using trend method is", opts:["a. nowcasting", "b. extrapolation", "c. first order", "d. linear"], ans:0, exp:`正解為 <strong>(a)</strong>。<br>極短期的趨勢預報稱為${t('即時預報 (Nowcasting)','即時預報','0-6小時內的精確預報')}。`},
+                {q:"A prog is", opts:["a. current state chart", "b. instrument", "c. new method", "d. forecast chart for future time"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>Prog 是 Prognostic chart，顯示大氣${t('未來','Prog','電腦預算的未來狀態')}狀態的圖。`},
+                {q:"Computer forecasting is known as", opts:["a. weather type", "b. climatology", "c. extended", "d. analogue", "e. numerical weather prediction"], ans:4, exp:`正解為 <strong>(e)</strong>。<br>利用電腦解方程式稱為${t('數值天氣預報','NWP','Numerical Weather Prediction')}。`},
+                {q:"When making a forecast, a meteorologist examines", opts:["a. surface charts", "b. upper-air charts", "c. radar", "d. satellite", "e. all of the above"], ans:4, exp:`正解為 <strong>(e)</strong>。<br>預報員會綜合所有觀測資料（預報漏斗概念）。`},
+                {q:"Lines connecting points of equal pressure change", opts:["a. isobars", "b. isograds", "c. contours", "d. isotherms", "e. isallobars"], ans:4, exp:`正解為 <strong>(e)</strong>。<br>等壓變線為 ${t('Isallobars','Isallobars','連接氣壓改變量相同之點')}。`},
+                {q:"Ordinary thunderstorms dissipate when", opts:["a. lightning neutralizes", "b. particles turn to ice", "c. downdraft cuts off updraft", "d. solar heating decreases"], ans:2, exp:`正解為 <strong>(c)</strong>。<br>無風切環境下，冷${t('下沉氣流','下沉氣流','降水拖曳下來的冷空氣')}會直接阻斷底部的暖濕上升氣流。`},
+                {q:"Not expected during passage of a gust front:", opts:["a. gusty winds", "b. rising pressure", "c. increase in temperatures", "d. wind shift"], ans:2, exp:`正解為 <strong>(c)</strong>。<br>${t('陣風鋒面','Gust Front','下沉冷空氣前緣')}通過時，氣溫會「驟降」而非上升。`},
+                {q:"Lightning may occur", opts:["a. within a cloud", "b. cloud to ground", "c. cloud to cloud", "d. all of the above"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>閃電可發生在雲內、雲際與雲地之間。`},
+                {q:"Safe inside an automobile during lightning because", opts:["a. antenna acts as rod", "b. rubber tires insulate", "c. cars do not charge", "d. metal body carries current around"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>金屬車身形成${t('法拉第籠','法拉第籠','電荷只分佈於導體外表')}，保護內部乘客。`},
+                {q:"Most important factor in tornado strength is", opts:["a. diameter", "b. air temperature", "c. duration", "d. central pressure"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>龍捲風強度取決於極端的${t('氣壓梯度','氣壓差','中心氣壓越低風速越強')}。`},
+                {q:"Enhanced Fujita Scale is based on", opts:["a. multiple indicators", "b. degree of damage", "c. atmospheric stability", "d. multiple indicators and degree of damage"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>EF Scale 基於多項${t('損害指標','Damage Indicators','根據建築毀損程度反推風速')}與損壞程度。`},
+                {q:"Streamlines depict", opts:["a. water temp", "b. pressure", "c. wind flow", "d. dew point"], ans:2, exp:`正解為 <strong>(c)</strong>。<br>流線用來直觀描繪整體的${t('風場流動','Wind Flow','平行於風向量的曲線')}。`},
+                {q:"Hurricane pressure is ___ at surface and ___ aloft.", opts:["a. higher, lower", "b. lower, higher", "c. lower, lower", "d. higher, higher"], ans:1, exp:`正解為 <strong>(b)</strong>。<br>颶風是${t('暖心系統','Warm Core','中心比四周暖，高空等壓面抬升形成高壓')}，地面為低壓，高空為高壓輻散。`},
+                {q:"NH hurricanes and mid-latitude cyclones both", opts:["a. have fronts", "b. intensify with height", "c. have counterclockwise winds", "d. move west to east"], ans:2, exp:`正解為 <strong>(c)</strong>。<br>北半球低壓系統風向皆受科氏力影響呈${t('逆時針','Counterclockwise','向右偏轉結果')}旋轉。`},
+                {q:"In a hurricane, the eye wall represents", opts:["a. exact center", "b. broken clouds", "c. light winds", "d. intense thunderstorms around center"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>${t('眼牆','Eyewall','風雨最猛烈處')}是環繞颱風眼的一圈強烈雷暴帶。`},
+                {q:"Main source of energy for a hurricane is", opts:["a. jet stream", "b. fronts", "c. warm ocean and latent heat", "d. ocean currents"], ans:2, exp:`正解為 <strong>(c)</strong>。<br>溫暖海水提供水氣，凝結釋放的${t('潛熱','Latent Heat','水氣凝結放熱')}是風暴引擎。`},
+                {q:"Hurricanes dissipate when", opts:["a. over colder water", "b. over land", "c. surface inflow exceeds outflow", "d. all of these"], ans:3, exp:`正解為 <strong>(d)</strong>。<br>失去水氣、摩擦力增加、或${t('流入大於流出','填平效應','底層空氣填滿中心低壓')}都會使颶風消散。`}
+            ];
+
+            const essays = [
+                {q:"1. List scales of atmospheric motion. Are size and duration related?", exp:`<strong>💡 詳解：</strong><br>宏觀(季風)、天氣尺度(颱風)、中尺度(海陸風)、微尺度(渦流)。兩者成${t('正相關','正相關','系統越大慣性越大，維持越久')}。`},
+                {q:"2. Why strong upper-level divergence causes surface low to decrease?", exp:`<strong>💡 詳解：</strong><br>高空${t('輻散','輻散抽吸','如抽水馬達')}移出空氣速度大於底層匯入，空氣柱總質量減少，導致地面氣壓下降。`},
+                {q:"3. Multicell vs ordinary thunderstorms. Favorable conditions?", exp:`<strong>💡 詳解：</strong><br>多胞胎因有強${t('垂直風切','風切','使風暴傾斜')}，冷下沉氣流不會阻斷上升氣流，反而在前緣形成${t('陣風鋒面','Gust Front','抬升前方暖空氣')}觸發新胞，壽命更長。`},
+                {q:"4. Data and tools for weather forecast.", exp:`<strong>💡 詳解：</strong><br>包含地面/高空觀測、雷達/衛星遙測影像、天氣圖、以及電腦運算的${t('數值天氣預報','NWP','解流體力學方程式')} (含系集預報)。`},
+                {q:"5. Conditions favorable/inhibit hurricane development.", exp:`<strong>💡 詳解：</strong><br>有利：暖海溫(SST>26.5°C提供${t('潛熱','潛熱','凝結放熱')})、高濕度、微弱風切、足夠科氏力。<br>不利：冷水域、登陸、強風切、底層流入量大於高空流出量。`},
+                {q:"6. Temperature variation from windward to leeward side of a mountain.", exp:`<strong>💡 詳解：</strong><br>迎風面空氣上升凝結，以${t('濕絕熱遞減率','6°C/km','因潛熱釋放抵銷降溫')}降溫。過山後空氣乾燥下沉，經歷${t('壓縮加熱','壓縮加熱','外界壓力作功')}並以${t('乾絕熱遞減率','10°C/km','未飽和降溫率')}快速增溫，形成焚風。`},
+                {q:"7. 除了板橋新店，台灣還有哪些高空觀測站？(舉2個)", exp:`<strong>💡 詳解：</strong><br>如：花蓮氣象站、馬公氣象站、綠島、東沙、南沙。`},
+                {q:"8. 印象深刻的圖片或影片及想強調的知識。", exp:`<strong>💡 詳解：</strong><br>自由發揮。例如：超大胞縮時攝影，強調了${t('中尺度氣旋','Mesocyclone','旋轉上升氣流')}的特徵與垂直風切的重要性。`}
+            ];
+
+            let mcHtml = '', esHtml = '';
+            mcqs.forEach((m,i) => {
+                let opts = m.opts.map((o,j) => `<li class="p-2 rounded border ${j===m.ans?'correct-option hidden':'wrong-option'} hover:bg-slate-50">${o} ${j===m.ans?'<span class="text-emerald-600 font-bold ml-2">(✅)</span>':''}</li>`).join('');
+                mcHtml += `<div class="q-card bg-white p-5 rounded-xl border border-slate-200"><div class="flex gap-4"><div class="font-bold text-slate-300 text-2xl w-8 text-right">${i+1}</div><div class="w-full"><h4 class="font-bold text-slate-800 mb-3">${m.q}</h4><ul class="text-sm text-slate-600 mb-4 space-y-1">${opts}</ul><button class="toggle-btn text-sm bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded font-bold">顯示解答</button><div class="explanation-box hidden mt-4 p-4 bg-indigo-50/50 border-l-4 border-indigo-500 rounded text-sm">${m.exp}</div></div></div></div>`;
+            });
+            document.getElementById('mc-container').innerHTML = mcHtml;
+
+            essays.forEach((e,i) => {
+                esHtml += `<div class="q-card bg-white p-5 rounded-xl border border-slate-200"><div class="flex gap-4"><div class="w-full"><h4 class="font-bold text-slate-800 mb-3">${e.q}</h4><button class="toggle-btn text-sm bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded font-bold">顯示解答</button><div class="explanation-box hidden mt-4 p-4 bg-slate-50 border-t-4 border-emerald-500 rounded text-sm">${e.exp}</div></div></div></div>`;
+            });
+            document.getElementById('essay-container').innerHTML = esHtml;
+
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const exp = this.nextElementSibling;
+                    const opts = this.parentElement.querySelectorAll('li');
+                    if(exp.classList.contains('hidden')) {
+                        exp.classList.remove('hidden'); this.textContent = '隱藏解答';
+                        this.classList.replace('bg-indigo-50','bg-slate-200'); this.classList.replace('text-indigo-700','text-slate-600');
+                        opts.forEach(o=>{ if(o.classList.contains('correct-option')){ o.classList.remove('hidden'); o.classList.add('correct-active'); }else{ o.classList.add('hidden'); } });
+                    } else {
+                        exp.classList.add('hidden'); this.textContent = '顯示解答';
+                        this.classList.replace('bg-slate-200','bg-indigo-50'); this.classList.replace('text-slate-600','text-indigo-700');
+                        opts.forEach(o=>{ if(o.classList.contains('correct-option')){ o.classList.add('hidden'); o.classList.remove('correct-active'); }else{ o.classList.remove('hidden'); } });
+                    }
+                });
+            });
+
+        }); // DOMContentLoaded End
+
+        // Global functions for inline HTML handlers
+        window.scrollToSection = function(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); };
+        
+        window.toggleAllAnswers = function(show) {
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                const hidden = btn.nextElementSibling.classList.contains('hidden');
+                if((show && hidden) || (!show && !hidden)) btn.click();
+            });
+        };
+
+        // CH9 Scale Logic
+        window.updateScale9 = function(key, btn) {
+            document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+            const d = {
+                micro: {t:"微尺度 (Microscale)", i:"< 2m, 數秒至分鐘", e:"小陣風、渦流"},
+                meso: {t:"中尺度 (Mesoscale)", i:"數十公里, 數小時至一天", e:"海陸風、雷雨胞、龍捲風"},
+                synoptic: {t:"天氣尺度 (Synoptic)", i:"數千公里, 數天至數週", e:"高低壓系統、鋒面、颱風"},
+                macro: {t:"宏觀尺度 (Macroscale)", i:"全球範圍, 數週至季", e:"行星長波、季風"}
+            }[key];
+            document.getElementById('ch9-scale-title').textContent = d.t;
+            document.getElementById('ch9-scale-info').textContent = d.i;
+            document.getElementById('ch9-scale-examples').textContent = d.e;
+        };
+
+        // CH9 Sea/Land Breeze Logic
+        let isDay9 = true;
+        window.toggleDayNight9 = function() {
+            isDay9 = !isDay9;
+            const k=document.getElementById('ch9-toggleKnob'), bg=document.getElementById('ch9-toggleBg'), sm=document.getElementById('ch9-sunMoon'),
+                  v=document.getElementById('ch9-simView'), lt=document.getElementById('ch9-landT'), st=document.getElementById('ch9-seaT'),
+                  lp=document.getElementById('ch9-landP'), sp=document.getElementById('ch9-seaP'), lb=document.getElementById('ch9-landBlock'),
+                  uw=document.getElementById('ch9-upWind'), sw=document.getElementById('ch9-sfcWind'), lv=document.getElementById('ch9-landV'), sv=document.getElementById('ch9-seaV'),
+                  ti=document.getElementById('ch9-simTitle'), de=document.getElementById('ch9-simDesc');
+            
+            if(isDay9) {
+                k.style.transform = 'translateX(0)'; bg.className = 'w-14 h-7 rounded-full relative transition-colors duration-300 focus:outline-none bg-sky-400';
+                sm.textContent = '☀️'; v.className = 'relative h-80 flex items-end overflow-hidden bg-sky-50';
+                lb.className = 'w-1/2 h-24 bg-amber-200 border-t-4 border-amber-300';
+                lt.textContent='陸地 (升溫快)'; lt.className='text-slate-800 font-bold'; st.textContent='海洋 (升溫慢)'; st.className='text-slate-800 font-bold';
+                lp.textContent='L (低壓)'; lp.className='text-red-500 font-bold text-2xl mb-12 bg-white/80 px-3 py-1 rounded';
+                sp.textContent='H (高壓)'; sp.className='text-blue-500 font-bold text-2xl mb-12 bg-white/80 px-3 py-1 rounded';
+                uw.innerHTML='<span class="text-xs text-slate-500 font-bold mb-1">高空風</span><span class="text-3xl text-slate-400 leading-none">→</span>'; uw.className='absolute top-1/4 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-flow-right';
+                sw.innerHTML='<span class="text-4xl text-sky-600 font-bold leading-none">←</span><span id="ch9-sfcLabel" class="text-sm text-sky-700 font-bold mt-1">海風 (向陸地)</span>'; sw.className='absolute bottom-1/3 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-flow-left';
+                lv.innerHTML='<span>↑</span><span class="text-xs font-bold mt-1">上升</span>'; lv.className='absolute bottom-1/3 left-1/4 text-3xl text-red-400 animate-flow-up flex flex-col items-center';
+                sv.innerHTML='<span>↓</span><span class="text-xs font-bold mt-1">下沉</span>'; sv.className='absolute bottom-1/3 right-1/4 text-3xl text-blue-400 animate-flow-down flex flex-col items-center';
+                ti.textContent='海風 (Sea Breeze)'; ti.className='text-2xl font-bold text-sky-600 mb-4';
+                de.textContent='白天陸地升溫快形成熱力低壓；海洋升溫慢形成相對高壓。底層風由海洋吹向陸地。';
+            } else {
+                k.style.transform = 'translateX(28px)'; bg.className = 'w-14 h-7 rounded-full relative transition-colors duration-300 focus:outline-none bg-indigo-900';
+                sm.textContent = '🌙'; v.className = 'relative h-80 flex items-end overflow-hidden bg-indigo-950';
+                lb.className = 'w-1/2 h-24 bg-slate-700 border-t-4 border-slate-800';
+                lt.textContent='陸地 (降溫快)'; lt.className='text-white font-bold'; st.textContent='海洋 (降溫慢)'; st.className='text-slate-300 font-bold';
+                lp.textContent='H (高壓)'; lp.className='text-blue-500 font-bold text-2xl mb-12 bg-slate-800/80 px-3 py-1 rounded';
+                sp.textContent='L (低壓)'; sp.className='text-red-500 font-bold text-2xl mb-12 bg-slate-800/80 px-3 py-1 rounded';
+                uw.innerHTML='<span class="text-xs text-slate-500 font-bold mb-1">高空風</span><span class="text-3xl text-slate-400 leading-none">←</span>'; uw.className='absolute top-1/4 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-flow-left';
+                sw.innerHTML='<span class="text-4xl text-indigo-400 font-bold leading-none">→</span><span id="ch9-sfcLabel" class="text-sm text-indigo-500 font-bold mt-1">陸風 (向海洋)</span>'; sw.className='absolute bottom-1/3 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-flow-right';
+                lv.innerHTML='<span>↓</span><span class="text-xs font-bold mt-1">下沉</span>'; lv.className='absolute bottom-1/3 left-1/4 text-3xl text-blue-400 animate-flow-down flex flex-col items-center';
+                sv.innerHTML='<span>↑</span><span class="text-xs font-bold mt-1">上升</span>'; sv.className='absolute bottom-1/3 right-1/4 text-3xl text-red-400 animate-flow-up flex flex-col items-center';
+                ti.textContent='陸風 (Land Breeze)'; ti.className='text-2xl font-bold text-indigo-600 mb-4';
+                de.textContent='夜晚陸地降溫快，空氣收縮形成高壓；海洋相對溫暖形成低壓。底層風由陸地吹向海洋。';
+            }
+        };
+
+        // CH13 Remote Tabs
+        window.switchTab13 = function(id, btn) {
+            document.querySelectorAll('#ch13-remoteTabs .tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+            const d = {
+                vis: {i:"☀️", t:"可見光衛星雲圖", d:"直接拍攝地球反射的太陽光。雲層越厚在圖上就越白。限制：僅白天可用。"},
+                ir: {i:"🌡️", t:"紅外線衛星雲圖", d:"測量輻射推算雲頂溫度。越白代表對流越旺盛。優勢：全天候可用。"},
+                wv: {i:"💧", t:"水氣頻道影像", d:"偵測中高層大氣水氣分佈。可用於追蹤無雲區域的大氣環流。"},
+                radar: {i:"📡", t:"都卜勒雷達", d:"發射微波偵測降水粒子，利用都卜勒效應測風速。發布劇烈天氣警報的核心。"}
+            }[id];
+            document.getElementById('ch13-tabIcon').textContent = d.i; document.getElementById('ch13-tabTitle').textContent = d.t; document.getElementById('ch13-tabDesc').textContent = d.d;
+        };
+
+        // CH13 Spaghetti Canvas
+        const spagCanvas = document.getElementById('ch13-spagCanvas'), spagCtx = spagCanvas.getContext('2d');
+        let spagAnimId, spagPaths=[], spagStep=0;
+        function runEnsemble13() {
+            if(spagAnimId) cancelAnimationFrame(spagAnimId);
+            const w=spagCanvas.parentElement.clientWidth, h=spagCanvas.parentElement.clientHeight;
+            spagCanvas.width=w; spagCanvas.height=h;
+            
+            const err = parseInt(document.getElementById('ch13-errSlider').value);
+            document.getElementById('ch13-errVal').textContent = err<30?'低':(err<70?'中':'高');
+            const bdg = document.getElementById('ch13-confBadge');
+            bdg.textContent = err<30?'預報可信度：高':(err<70?'預報可信度：中':'預報可信度：極低');
+            bdg.className = err<30?'px-4 py-2 rounded-full font-bold text-sm bg-green-100 text-green-800':(err<70?'px-4 py-2 rounded-full font-bold text-sm bg-amber-100 text-amber-800':'px-4 py-2 rounded-full font-bold text-sm bg-red-100 text-red-800');
+
+            spagPaths=[];
+            for(let m=0;m<20;m++){
+                let p=[{x:0,y:h/2}], cy=h/2;
+                for(let i=1;i<=100;i++){
+                    cy += Math.sin(i*0.1+m)*2 + (Math.random()-0.5)*20*(err/100)*Math.exp((i/100)*3);
+                    p.push({x:i*(w/100), y:Math.max(20,Math.min(h-20,cy))});
+                }
+                spagPaths.push({pts:p, col:`hsla(${Math.random()*360},70%,60%,0.8)`});
+            }
+            spagStep=0;
+            function drawS() {
+                spagCtx.fillStyle='#0f172a'; spagCtx.fillRect(0,0,w,h);
+                spagCtx.strokeStyle='#1e293b'; spagCtx.lineWidth=1;
+                for(let i=1;i<10;i++){ spagCtx.beginPath(); spagCtx.moveTo(w*i/10,0); spagCtx.lineTo(w*i/10,h); spagCtx.stroke(); }
+                spagPaths.forEach((path, idx) => {
+                    spagCtx.beginPath(); spagCtx.moveTo(path.pts[0].x, path.pts[0].y);
+                    for(let i=1;i<=spagStep;i++) spagCtx.lineTo(path.pts[i].x, path.pts[i].y);
+                    spagCtx.strokeStyle = idx===0?'#fff':path.col; spagCtx.lineWidth=idx===0?3:1.5; spagCtx.stroke();
+                });
+                if(spagStep<100) { spagStep+=2; spagAnimId=requestAnimationFrame(drawS); }
+            }
+            drawS();
+        }
+        document.getElementById('ch13-errSlider').addEventListener('input', runEnsemble13);
+        setTimeout(runEnsemble13, 500);
+
+        // CH14 Storm Stage
+        window.setStormStage14 = function(stage, btn) {
+            document.querySelectorAll('.stage-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+            const d = {
+                cumulus:{bg:'from-sky-800 to-slate-700', sc:'scale-75', u:'1', dw:'0', l:'0'},
+                mature:{bg:'from-slate-800 to-slate-900', sc:'scale-110', u:'1', dw:'1', l:'1'},
+                dissipating:{bg:'from-slate-700 to-slate-800', sc:'scale-90', u:'0.2', dw:'1', l:'0'}
+            }[stage];
+            document.getElementById('ch14-stormBg').className = `absolute inset-0 bg-gradient-to-b ${d.bg} transition-colors duration-700`;
+            document.getElementById('ch14-cloudIcon').className = `text-8xl transform ${d.sc} transition-transform duration-700`;
+            document.getElementById('ch14-lightning').style.opacity = d.l;
+            document.getElementById('ch14-updraft').style.opacity = d.u;
+            document.getElementById('ch14-downdraft').style.opacity = d.dw;
+        };
+
+        // CH14 Radar Canvas
+        const rCan = document.getElementById('ch14-radarCanvas'), rCtx = rCan.getContext('2d');
+        let rTime = 0;
+        function drawRadar() {
+            rCan.width = rCan.parentElement.clientWidth; rCan.height = rCan.parentElement.clientHeight;
+            const cx=rCan.width/2, cy=rCan.height/2, rad=Math.min(cx,cy);
+            rTime+=0.02; let bp = (Math.sin(rTime)+1)/2;
+            rCtx.lineCap='round'; rCtx.lineJoin='round';
+            const seg=20, len=rad*1.2, sy=cy-len/2, bx=cx-rad*0.2;
+            [{c:'rgba(34,197,94,0.6)',w:40}, {c:'rgba(234,179,8,0.8)',w:25}, {c:'rgba(239,68,68,0.9)',w:10}].forEach(l => {
+                rCtx.beginPath(); rCtx.strokeStyle=l.c; rCtx.lineWidth=l.w;
+                for(let i=0;i<=seg;i++){
+                    let y = sy+(i*len/seg), d = Math.abs((i-seg/2)/(seg/2));
+                    let x = bx + (1-d*d)*rad*0.6*bp + (Math.random()-0.5)*5;
+                    i===0?rCtx.moveTo(x,y):rCtx.lineTo(x,y);
+                }
+                rCtx.stroke();
+            });
+            requestAnimationFrame(drawRadar);
+        }
+        drawRadar();
+
+        // CH14 Hurricane Canvas
+        const hCan = document.getElementById('ch14-hurrCanvas'), hCtx = hCan.getContext('2d');
+        let hPts=[], hInt=0;
+        function initH() { hPts=[]; for(let i=0;i<250;i++) hPts.push({s:Math.random()>0.5?1:-1, x:0, y:0, st:0, sp:Math.random()*2+1, sz:Math.random()*3+1, o:Math.random()*0.5+0.3, reset:function(w,h){this.x=w/2+this.s*w/2*(0.5+Math.random()*0.5); this.y=h-20; this.st=0; this.o=Math.random()*0.5+0.3;}}); }
+        function updateH() {
+            hCan.width = hCan.parentElement.clientWidth; hCan.height = hCan.parentElement.clientHeight;
+            const w=hCan.width, h=hCan.height;
+            if(hPts.length===0) { initH(); hPts.forEach(p=>p.reset(w,h)); }
+            
+            const grad = hCtx.createLinearGradient(0,h-40,0,h); grad.addColorStop(0,'#0f172a'); grad.addColorStop(1, hInt>0.5?'#991b1b':'#1e3a8a');
+            hCtx.fillStyle=grad; hCtx.fillRect(0,h-40,w,40);
+            
+            if(hInt>0) {
+                hCtx.fillStyle=`rgba(51,65,85,${hInt*0.8})`;
+                hCtx.fillRect(w/2-100,40,60,h-80); hCtx.fillRect(w/2+40,40,60,h-80); // Eyewall
+                hCtx.fillRect(w/2-200,100,40,h-140); hCtx.fillRect(w/2+160,100,40,h-140); // Rainband
+                hCtx.fillRect(0,20,w,40); // Outflow
+            }
+            
+            hPts.forEach(p => {
+                if(hInt<=0) return;
+                let s = p.sp*hInt;
+                if(p.st===0) { p.x-=p.s*s*1.5; if(Math.abs(p.x-w/2)<100) p.st=1; }
+                else if(p.st===1) { p.y-=s*2.5; p.x+=(Math.random()-0.5)*2; if(p.y<50) p.st=2; }
+                else { p.x+=p.s*s*2; p.y-=s*0.2; p.o-=0.01; if(p.x<0||p.x>w||p.o<=0) p.reset(w,h); }
+                hCtx.beginPath(); hCtx.arc(p.x,p.y,p.sz,0,Math.PI*2);
+                hCtx.fillStyle = p.st===0?`rgba(239,68,68,${p.o})`:(p.st===1?`rgba(168,85,247,${p.o})`:`rgba(59,130,246,${p.o})`);
+                hCtx.fill();
+            });
+            requestAnimationFrame(updateH);
+        }
+        
+        function setH() {
+            let v = parseFloat(document.getElementById('ch14-sstSlider').value);
+            document.getElementById('ch14-sstVal').textContent = v+'°C';
+            let stat = document.getElementById('ch14-hurrStatus');
+            if(v<25){ hInt=0; stat.textContent='熱帶擾動'; stat.style.color='#94a3b8'; }
+            else if(v<26.5){ hInt=0.3; stat.textContent='低氣壓'; stat.style.color='#eab308'; }
+            else if(v<28){ hInt=0.8; stat.textContent='熱帶風暴'; stat.style.color='#f97316'; }
+            else { hInt=1.5; stat.textContent='強烈颱風'; stat.style.color='#ef4444'; }
+        }
+        document.getElementById('ch14-sstSlider').addEventListener('input', setH);
+        setH(); updateH();
+
+    </script>
+</body>
+</html>
