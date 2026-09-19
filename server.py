@@ -159,5 +159,5 @@ async def get_learning_stats() -> str:
     )
 
 if __name__ == "__main__":
-    # 以 SSE 模式啟動服務
-    mcp.run(transport="sse")
+    port = int(os.environ.get("PORT", 8000))
+    mcp.run(transport="sse", host="0.0.0.0", port=port)
