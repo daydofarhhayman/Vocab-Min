@@ -1,4 +1,4 @@
-mcp<2
+fastmcp
 firebase-admin>=6.5.0
 uvicorn>=0.30.0
 starlette>=0.38.0

@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 # 1. 初始化 Firebase Admin
 cred_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
@@ -24,8 +24,7 @@ if not USER_ID:
     print("警告: 尚未設定 VOCABMIN_USER_ID 環境變數")
 
 # 2. 建立 FastMCP 伺服器實例
-port = int(os.environ.get("PORT", 8000))
-mcp = FastMCP("VocabMin-Server", host="0.0.0.0", port=port)
+mcp = FastMCP("VocabMin-Server")
 
 
 # --- 工具 1: 新增單字 ---
@@ -159,4 +158,5 @@ async def get_learning_stats() -> str:
     )
 
 if __name__ == "__main__":
-    mcp.run(transport="sse")
+    port = int(os.environ.get("PORT", 8000))
+    mcp.run(transport="http", host="0.0.0.0", port=port)
