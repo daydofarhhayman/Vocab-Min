@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VocabMin</title>
+    <title>VocabMin v7.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
     <script>
@@ -112,8 +112,8 @@
             <div class="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto text-white text-3xl">
                 <i class="fas fa-book-open"></i>
             </div>
-            <h1 class="text-4xl font-bold text-white tracking-tight">VocabMin V7</h1>
-            <p class="text-gray-400">雲端同步版</p>
+            <h1 class="text-4xl font-bold text-white tracking-tight">VocabMin v7.1</h1>
+            <p class="text-gray-400">雲端同步版 (v7.1 穩定版)</p>
             <button id="btn-login" class="px-8 py-3 bg-white text-gray-900 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-xl flex items-center gap-3 mx-auto">
                 <i class="fab fa-google text-red-500"></i> 使用 Google 帳號登入
             </button>
@@ -178,10 +178,6 @@
                     <div id="home-search-results" class="absolute w-full mt-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden hidden max-h-60 overflow-y-auto"></div>
                 </div>
 
-
-
-
-                
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4">    
                     <button onclick="Controller.nav.add()" class="home-btn group border border-white dark:border-gray-700 flex flex-col items-center justify-center p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-32">
                         <div class="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl mb-2 group-hover:scale-110 transition-transform">
@@ -233,27 +229,6 @@
         <div id="view-settings" class="view-section hidden max-w-2xl mx-auto animate-enter">
             <h2 class="text-2xl font-bold mb-6 flex items-center gap-2"><i class="fas fa-sliders-h text-indigo-500"></i> <span data-i18n="title_settings">設定</span></h2>
             <div class="space-y-4">
-
-                <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 border-l-4 border-indigo-500">
-                    <h3 class="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <i class="fas fa-robot"></i> AI 設定 (必填)
-                    </h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Gemini API Key</label>
-                            <input type="password" id="setting-api-key" onchange="Controller.settings.setApiKey(this.value)" class="w-full p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-mono focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="在此貼上 AI Studio 申請的 Key...">
-                            <p class="text-[10px] text-gray-400 mt-1">Key 僅儲存於您的瀏覽器，不會上傳伺服器。</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">模型選擇</label>
-                            <select id="setting-ai-model" onchange="Controller.settings.setAiModel(this.value)" class="w-full p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition cursor-pointer">
-                                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
 
                  <!-- Review Settings -->
                  <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -375,22 +350,7 @@
                 <!-- Single -->
                 <div id="input-single-form" class="space-y-6">
                     <div>
-                        <div class="flex justify-between items-end mb-2">
-                            <label class="block text-xs font-bold text-gray-500 uppercase pb-1" data-i18n="lbl_word">單字</label>
-                            
-                            <div class="flex items-center gap-2">
-                                <select id="ai-mode" class="text-xs font-bold bg-transparent text-gray-500 dark:text-gray-400 outline-none cursor-pointer border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                                    <option value="zh">中文翻譯</option>
-                                    <option value="en">英文定義</option>
-                                </select>
-
-                                <button onclick="Controller.features.autoFill()" class="text-xs font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800 rounded-lg px-3 py-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition flex items-center gap-1.5 shadow-sm" title="AI Auto Fill">
-                                    <i class="fas fa-magic"></i> 
-                                    <span>AI 填寫</span>
-                                </button>
-                            </div>
-                        </div>
-
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2" data-i18n="lbl_word">單字</label>
                         <input type="text" id="add-word" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-bold text-lg" placeholder="Word">
                     </div>
                     <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 text-xs text-blue-600 dark:text-blue-300 flex items-center gap-2"><i class="fas fa-info-circle"></i> <span data-i18n="hint_add_multiple">可新增多個釋義</span></div>
@@ -412,8 +372,7 @@
                         <p class="font-mono text-xs opacity-80 mb-1">1. Excel 複製貼上 (Tab 分隔)</p>
                         <p class="font-mono text-xs opacity-80">2. 標準 CSV (逗號分隔, 支援引號)</p>
                     </div>
-                    <textarea id="inp-bulk-text" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm h-64" placeholder='"Word","POS","Definition","Example","Level"
-"apple","n.","A fruit","I eat an apple.","1"'></textarea>
+                    <textarea id="inp-bulk-text" class="w-full p-4 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl font-mono text-sm h-64" placeholder='"Word","POS","Definition","Example","Level"&#10;"apple","n.","A fruit","I eat an apple.","1"'></textarea>
                     <button onclick="Controller.forms.addBulk()" class="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-lg transform active:scale-95 transition">
                         <i class="fas fa-file-import mr-2"></i><span data-i18n="btn_import">匯入資料</span>
                     </button>
@@ -674,7 +633,7 @@
                     <textarea id="popup-input-ex" class="w-full p-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 h-20 resize-none focus:ring-1 focus:ring-indigo-500 outline-none" placeholder="Example Sentence..."></textarea>
                 </div>
                 <button onclick="Controller.reader.quickAdd()" class="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700 transition">新增至單字庫</button>
-                <button onclick="window.open(`https://dictionary.cambridge.org/dictionary/english/${document.getElementById('popup-word').innerText}`, '_blank')" class="w-full py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700">查詢 Cambridge</button>
+                <button onclick="Controller.reader.openCambridge()" class="w-full py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700">查詢 Cambridge</button>
             </div>
         </div>
     </div>
@@ -682,10 +641,9 @@
     <script type="module">
     // --- 0. FIREBASE IMPORTS & CONFIG ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    // TODO: 貼上你的 Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyBQ7hfoJkvMNRT4qPoSz5CyJ2KisOAYXSA",
         authDomain: "vocabmin-app.firebaseapp.com",
@@ -701,12 +659,11 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
-    // --- 1. CONFIG & TRANSLATIONS (維持原樣) ---
+    // --- 1. CONFIG & TRANSLATIONS ---
     const CONFIG = {
         defaults: { darkMode: false, lang: 'zh', themeStyle: 'glass', listViewMode: 'grid', basicMode: false, mergeReview: false, reviewLimit: 30, articleHighlight: false }
     };
     
-    // ... (此處保留原本的 TRANSLATIONS 物件，內容太長省略，請照舊複製) ...
     const TRANSLATIONS = {
         zh: {
             title_list: "單字庫", title_settings: "設定", title_add: "新增單字", title_edit: "修改單字", title_review: "複習", title_stats: "學習檢視", title_reader: "閱讀文章",
@@ -721,12 +678,11 @@
             lvl_new: "陌生", lvl_learning: "學習", lvl_familiar: "熟悉", lvl_mastered: "精通",
             ph_search: "搜尋單字...", hint_flip: "點擊翻轉", hint_keyboard: "空白鍵: 翻牌 | →: 下一張 | 1-4: 評分", hint_edit_multiple: "此單字有多個釋義", hint_add_multiple: "可新增多個釋義",
             stat_added: "新增", stat_reviewed: "複習", stats_total_words: "總單字量", stat_today: "今日概況", stat_added_short: "新增", stat_reviewed_short: "複習", stat_month_added: "本月新增", stat_month_reviewed: "本月複習",
-            msg_saved: "儲存成功", msg_updated: "更新成功", msg_empty: "請輸入完整資料", msg_duplicate: "單字已存在", msg_imported: "匯入成功",
+            msg_saved: "儲存成功", msg_updated: "更新成功", msg_empty: "請輸入完整資料", msg_duplicate: "單字已存在", msg_imported: "匯入成功", msg_cleared: "資料已清空", confirm_clear_all: "確定要清空雲端與本地所有資料嗎？此操作無法復原。", hint_no_review_words: "沒有符合篩選條件或到期的單字", hint_select_text_first: "請先在文章中反白選取文字",
             list_header_word: "單字", list_header_pos: "詞性", list_header_level: "熟練度", list_header_action: "操作",
         },
         en: {
-            // ... 請自行補上原本的英文翻譯 ...
-             title_list: "Vocabulary", title_settings: "Settings", title_add: "Add Word", title_edit: "Edit Word", title_review: "Review", title_stats: "Stats", title_reader: "Reader",
+            title_list: "Vocabulary", title_settings: "Settings", title_add: "Add Word", title_edit: "Edit Word", title_review: "Review", title_stats: "Stats", title_reader: "Reader",
             btn_input: "Add Words", btn_review: "Start Review", btn_list: "Library", btn_stats: "Statistics", btn_reader: "Reader",btn_pdf: "PDF Books",btn_import_json: "Import Backup (JSON)",btn_export_json: "Export Backup (JSON)",btn_import_txt: "Import Book/Article (.txt)",
             tab_single: "Single", tab_bulk: "Bulk",
             lbl_word: "Word", lbl_pos: "POS", lbl_def: "Definition", lbl_ex: "Example",
@@ -738,7 +694,7 @@
             lvl_new: "New", lvl_learning: "Learning", lvl_familiar: "Familiar", lvl_mastered: "Mastered",
             ph_search: "Search...", hint_flip: "Tap to flip", hint_keyboard: "Space: Flip | →: Next | 1-4: Rate", hint_edit_multiple: "Multiple definitions", hint_add_multiple: "Add multiple meanings",
             stat_added: "Added", stat_reviewed: "Reviewed", stats_total_words: "Total Words", stat_today: "Today", stat_added_short: "Added", stat_reviewed_short: "Reviewed", stat_month_added: "Month Added", stat_month_reviewed: "Month Reviewed",
-            msg_saved: "Saved!", msg_updated: "Updated!", msg_empty: "Fill fields", msg_duplicate: "Exists!", msg_imported: "Imported!",
+            msg_saved: "Saved!", msg_updated: "Updated!", msg_empty: "Please fill in fields", msg_duplicate: "Word already exists!", msg_imported: "Import successful!", msg_cleared: "All data cleared", confirm_clear_all: "Are you sure you want to clear all data? This cannot be undone.", hint_no_review_words: "No review cards due for current filters", hint_select_text_first: "Please select text in the article first",
             list_header_word: "Word", list_header_pos: "POS", list_header_level: "Level", list_header_action: "Action"
         }
     };
@@ -746,7 +702,6 @@
     const REVIEW_STAGES = [1, 3, 7, 14, 30, 60, 120, 240, 365];
 
     // --- 2. STATE ---
-    // 這裡我們維持 AppState 在記憶體中，但資料來源是 Firebase
     const AppState = {
         user: null, // Firebase User
         words: [], articles: [], dailyStats: {}, settings: { ...CONFIG.defaults },
@@ -754,29 +709,21 @@
         calDate: new Date(), editingIds: [],
         currentTokens: [],
         tempSentence: "",
-        reader: { isPlaying: false, utterance: null, speed: 1.0 },
-        backup: null,
-        ai: {
-            apiKey: localStorage.getItem('vocab_ai_key') || "", 
-            model: localStorage.getItem('vocab_ai_model') || "gemini-1.5-flash"
-            }
+        reader: { sentences: [], currentSentenceIdx: 0, isPlaying: false, isPaused: false, speed: 1.0 },
+        backup: null
     };
 
-    // --- 3. CORE (Business Logic - REFACTORED FOR FIREBASE) ---
+    // --- 3. CORE (Business Logic) ---
     const Core = {
-        // 初始化現在改為監聽 Auth 狀態
         init: () => {
             const btnLogin = document.getElementById('btn-login');
             const authStatus = document.getElementById('auth-status');
             const overlay = document.getElementById('auth-overlay');
-            // ▼▼▼ 新增這一行：取得 Loader 元素 ▼▼▼
             const loader = document.getElementById('global-loader'); 
 
             btnLogin.addEventListener('click', async () => {
                 try {
-                    // 這行會跳出 Google 登入視窗
                     await signInWithPopup(auth, provider);
-                    // 登入成功後，onAuthStateChanged 會自動偵測到，並執行後續載入
                 } catch (error) {
                     console.error("Login Error:", error);
                     alert("登入失敗: " + error.message);
@@ -787,28 +734,20 @@
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
-                    // 1. 使用者已登入
                     AppState.user = user;
                     overlay.classList.add('opacity-0', 'pointer-events-none');
-                    
-                    // 2. 等待雲端資料下載完成 (這是最花時間的步驟)
                     await Core.loadFromCloud(); 
                     
                     UI.init();
                     Core.checkDecay(); 
                     UI.toast(`歡迎回來, ${user.displayName}`);
 
-                    // ▼▼▼ 資料都好了，隱藏載入遮罩 ▼▼▼
                     if(loader) {
                         loader.classList.add('opacity-0', 'pointer-events-none');
-                        setTimeout(() => loader.remove(), 500); // 讓它淡出後完全移除
+                        setTimeout(() => loader.remove(), 500);
                     }
-
                 } else {
-                    // 1. 使用者未登入
                     overlay.classList.remove('opacity-0', 'pointer-events-none');
-                    
-                    // ▼▼▼ 雖然沒登入，但也算「載入完成」(要顯示登入按鈕)，所以也要隱藏遮罩 ▼▼▼
                     if(loader) {
                         loader.classList.add('opacity-0', 'pointer-events-none');
                         setTimeout(() => loader.remove(), 500);
@@ -817,7 +756,6 @@
             });
         },
 
-        // 從 Firebase 載入所有資料
         loadFromCloud: async () => {
             if (!AppState.user) return;
             const uid = AppState.user.uid;
@@ -826,17 +764,8 @@
             const settingsSnap = await getDoc(doc(db, 'users', uid, 'data', 'settings'));
             if (settingsSnap.exists()) {
                 const data = settingsSnap.data();
-                
-                // 如果雲端有存 AI 設定，就讀取並同步到 AppState
-                if (data.ai) {
-                    AppState.ai = { ...AppState.ai, ...data.ai };
-                    // 同步回本地 localStorage，以免下次重新整理又要重抓
-                    localStorage.setItem('vocab_ai_key', AppState.ai.apiKey);
-                    localStorage.setItem('vocab_ai_model', AppState.ai.model);
-                    
-                    // 從 data 中移除 ai 屬性，避免汙染到 AppState.settings
-                    delete data.ai; 
-                }
+                if (data.ai) delete data.ai;
+                AppState.settings = { ...AppState.settings, ...data };
             }
 
             // 2. Load Stats
@@ -847,7 +776,6 @@
             const wordsSnap = await getDocs(collection(db, 'users', uid, 'words'));
             AppState.words = [];
             wordsSnap.forEach(doc => AppState.words.push(doc.data()));
-            // Sort words by time
             AppState.words.sort((a, b) => b.timestamp - a.timestamp);
 
             // 4. Load Articles (Subcollection)
@@ -860,28 +788,22 @@
             UI.updateStats();
         },
 
-        // --- CRUD Operations (Cloud) ---
-
-        // 新增單字：寫入 Cloud 並更新 Local State
         addWord: async (data) => {
             if (!AppState.user) return;
             const now = Date.now();
             const id = now + Math.random().toString(36).substr(2, 5);
             const lvl = data.level !== undefined ? parseInt(data.level) : 0;
             const newWord = { 
-                id: id, // 使用字串 ID
+                id: id,
                 ...data, 
                 level: isNaN(lvl) ? 0 : lvl, 
                 timestamp: now, 
                 lastReview: now 
             };
 
-            // Firebase Write
             await setDoc(doc(db, 'users', AppState.user.uid, 'words', id), newWord);
-            
-            // Local Update
             AppState.words.unshift(newWord);
-            Core.recordActivity('added'); // Stats are saved separately
+            Core.recordActivity('added');
         },
 
         updateWord: async (id, data) => {
@@ -889,18 +811,14 @@
             const idx = AppState.words.findIndex(w => w.id === id);
             if (idx > -1) {
                 const updated = { ...AppState.words[idx], ...data };
-                // Firebase Update
                 await updateDoc(doc(db, 'users', AppState.user.uid, 'words', id), data);
-                // Local Update
                 AppState.words[idx] = updated;
             }
         },
 
         deleteWord: async (id) => {
             if (!AppState.user) return;
-            // Firebase Delete
             await deleteDoc(doc(db, 'users', AppState.user.uid, 'words', id));
-            // Local Delete
             AppState.words = AppState.words.filter(w => w.id !== id);
             UI.updateStats();
         },
@@ -909,18 +827,18 @@
             if (!AppState.user) return;
             const toDelete = AppState.words.filter(w => w.term.toLowerCase() === term.toLowerCase());
             
-            // Batch delete for efficiency
-            const batch = writeBatch(db);
-            toDelete.forEach(w => {
-                batch.delete(doc(db, 'users', AppState.user.uid, 'words', w.id));
-            });
-            await batch.commit();
+            for (let i = 0; i < toDelete.length; i += 400) {
+                const batch = writeBatch(db);
+                toDelete.slice(i, i + 400).forEach(w => {
+                    batch.delete(doc(db, 'users', AppState.user.uid, 'words', w.id));
+                });
+                await batch.commit();
+            }
 
             AppState.words = AppState.words.filter(w => w.term.toLowerCase() !== term.toLowerCase());
             UI.updateStats();
         },
 
-        // Articles
         addArticle: async (title, content) => {
             if (!AppState.user) return;
             const now = Date.now();
@@ -947,60 +865,56 @@
             AppState.articles = AppState.articles.filter(a => a.id !== id);
         },
 
-        // Stats & Activity
         recordActivity: async (type) => {
             if (!AppState.user) return;
             const today = new Date().toISOString().split('T')[0];
             if (!AppState.dailyStats[today]) AppState.dailyStats[today] = { added: 0, reviewed: 0 };
             AppState.dailyStats[today][type]++;
             
-            // Save Stats (Whole object for simplicity, or use set with merge)
             await setDoc(doc(db, 'users', AppState.user.uid, 'data', 'stats'), AppState.dailyStats);
             UI.updateStats();
         },
 
-        // Settings
         saveSettings: async () => {
             if (!AppState.user) return;
-            // 將設定與 AI 資料合併存入同一個文件
-            const payload = {
-                ...AppState.settings,
-                ai: AppState.ai 
-            };
-            await setDoc(doc(db, 'users', AppState.user.uid, 'data', 'settings'), payload);
+            await setDoc(doc(db, 'users', AppState.user.uid, 'data', 'settings'), AppState.settings);
         },
 
-        // 遺忘曲線檢查 (批次更新)
         checkDecay: async () => {
             if (!AppState.user) return 0;
             const now = Date.now();
             let decayedCount = 0;
-            const batch = writeBatch(db);
-            let batchCount = 0;
+            const pendingUpdates = [];
 
             AppState.words.forEach(w => {
                 if (!w.interval) w.interval = 1;
-                w.nextReview = w.lastReview + (w.interval * 86400000);
+                if (!w.nextReview) w.nextReview = (w.lastReview || now) + (w.interval * 86400000);
                 const overdueDays = (now - w.nextReview) / (1000 * 60 * 60 * 24);
 
                 if (overdueDays > 0) {
                     let originalLevel = w.level;
-                    if (overdueDays > 2) w.level = 0;
+                    if (overdueDays > 3) w.level = 0;
                     else if (overdueDays > 1 && w.level > 1) w.level = 1;
                     else if (w.level === 3) w.level = 2;
 
                     if (w.level !== originalLevel) {
                         decayedCount++;
-                        batch.update(doc(db, 'users', AppState.user.uid, 'words', w.id), { level: w.level });
-                        batchCount++;
+                        pendingUpdates.push({ id: w.id, level: w.level });
                     }
                 }
             });
 
-            if (batchCount > 0) {
-                await batch.commit();
+            if (pendingUpdates.length > 0) {
+                for (let i = 0; i < pendingUpdates.length; i += 400) {
+                    const batch = writeBatch(db);
+                    pendingUpdates.slice(i, i + 400).forEach(u => {
+                        batch.update(doc(db, 'users', AppState.user.uid, 'words', u.id), { level: u.level });
+                    });
+                    await batch.commit();
+                }
+
                 setTimeout(() => {
-                    UI.toast(`雲端同步：${decayedCount} 個單字因未複習而降級`);
+                    UI.toast(`雲端同步：${decayedCount} 個單字因未即時複習而更新狀態`);
                 }, 2000);
                 if (!document.getElementById('view-list').classList.contains('hidden')) {
                     UI.renderList(document.getElementById('list-search').value);
@@ -1010,7 +924,6 @@
         },
 
         importCSV: async (text) => {
-             // CSV Parser (Same logic)
              let stats = { added: 0, skipped: 0, invalid: 0 };
              const parseLine = (line) => {
                  const looksLikeCSV = line.includes('","') || (line.trim().startsWith('"') && line.trim().endsWith('"'));
@@ -1036,8 +949,6 @@
              };
 
              const lines = text.split(/\r?\n/);
-             
-             // Use Batch for bulk add (Max 500 ops per batch)
              const batch = writeBatch(db);
              let batchOpCount = 0;
 
@@ -1060,17 +971,16 @@
                  
                  if (term && def) {
                      if (!AppState.words.some(w => w.term.toLowerCase() === term.toLowerCase() && w.def === def)) {
-                         // Prepare data for Cloud
                          const now = Date.now();
-                         const id = now + Math.random().toString(36).substr(2, 5) + index; // Ensure unique ID in loop
+                         const id = now + Math.random().toString(36).substr(2, 5) + index;
                          const newWord = { id, term, pos, def, ex, level: parseInt(level)||0, timestamp: now, lastReview: now, interval: 1 };
                          
                          batch.set(doc(db, 'users', AppState.user.uid, 'words', id), newWord);
-                         AppState.words.unshift(newWord); // Update local instantly
+                         AppState.words.unshift(newWord);
                          batchOpCount++;
                          stats.added++;
 
-                         if(batchOpCount >= 450) { // Firestore limit safety
+                         if(batchOpCount >= 450) {
                              await batch.commit();
                              batchOpCount = 0;
                          }
@@ -1080,79 +990,22 @@
              
              if(batchOpCount > 0) await batch.commit();
              return stats;
-        },
-
-        fetchWordData: async (word, mode = 'zh') => { 
-
-            if (!AppState.ai.apiKey) { alert("請填入 API Key"); return null; }
-
-            // ▼▼▼ 補回遺失的部分：定義 modelName ▼▼▼
-            let modelName = AppState.ai.model || "gemini-1.5-flash";
-            if (modelName.startsWith("models/")) {
-                modelName = modelName.replace("models/", "");
-            }
-            // ▲▲▲ 補回結束 ▲▲▲
-
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${AppState.ai.apiKey}`;
-
-            // 設定 Prompt (根據模式切換)
-            let promptText = "";
-            if (mode === 'en') {
-                promptText = `
-                    You are an English vocabulary dictionary. 
-                    Word: "${word}".
-                    Provide a simple English definition.
-                    Output JSON only: {"pos":"part of speech (e.g. n., v.)","def":"Simple English definition","ex":"Simple English example sentence"}
-                `;
-            } else {
-                promptText = `
-                    You are an English vocabulary dictionary. 
-                    Word: "${word}".
-                    Provide the most common Traditional Chinese translation (NOT a description).
-                    Output JSON only: {"pos":"part of speech (e.g. n., v.)","def":"Traditional Chinese translation (concise)","ex":"Simple English example sentence"}
-                `;
-            }
-
-            try {
-                UI.toast(`AI 查詢中 (${modelName})...`);
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) 
-                });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    console.error("AI API Error Detail:", err);
-                    alert(`API 請求失敗 (${response.status}):\n${err.error?.message || response.statusText}`);
-                    return null;
-                }
-
-                const data = await response.json();              
-                let rawText = data.candidates[0].content.parts[0].text;
-                const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-                let text = jsonMatch ? jsonMatch[0] : rawText;
-
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error("JSON Parse Error. Raw AI Text:", rawText);
-                    alert("AI 回傳格式錯誤，請重試");
-                    return null;
-                }
-
-            } catch (e) {
-                console.error("Fetch Error:", e);
-                // 這裡的錯誤訊息會更明確指出是不是程式碼寫錯
-                alert("執行錯誤 (請看 Console): " + e.message);
-                return null;
-            }
-        },
+        }
     };
 
-    // --- 4. UTILS (維持原樣) ---
+    // --- 4. UTILS ---
     const Utils = {
-        t: (k) => TRANSLATIONS[AppState.settings.lang][k] || k,
+        t: (k) => {
+            const lang = (AppState.settings && AppState.settings.lang) || 'zh';
+            const dict = TRANSLATIONS[lang] || TRANSLATIONS['zh'];
+            return dict[k] || k;
+        },
+        escapeHtml: (str) => {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[m]);
+        },
         speak: (text, e, rate = 1.0, onEnd = null) => {
             if (e) e.stopPropagation();
             if (!text) return;
@@ -1188,7 +1041,7 @@
         }
     };
 
-    // --- 5. UI (維持原樣，但需要在 updateSettings 時呼叫 Core.saveSettings) ---
+    // --- 5. UI ---
     const UI = {
         init: () => {
             UI.applySettings();
@@ -1246,9 +1099,6 @@
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => el.placeholder = t[el.getAttribute('data-i18n-placeholder')]);
             document.getElementById('lang-zh').classList.toggle('bg-indigo-50', s.lang === 'zh');
             document.getElementById('lang-en').classList.toggle('bg-indigo-50', s.lang === 'en');
-
-            if(document.getElementById('setting-api-key')) document.getElementById('setting-api-key').value = AppState.ai.apiKey;
-            if(document.getElementById('setting-ai-model')) document.getElementById('setting-ai-model').value = AppState.ai.model;
         },
         updateStats: () => {
             document.getElementById('total-count').innerText = AppState.words.length;
@@ -1276,15 +1126,12 @@
             const mode = AppState.settings.listViewMode;
             const basic = AppState.settings.basicMode;
             
-            // 更新按鈕狀態 (這部分維持原樣)
             document.getElementById('btn-view-grid').className = `p-1.5 rounded-md transition ${mode === 'grid' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500'}`;
             document.getElementById('btn-view-list').className = `p-1.5 rounded-md transition ${mode === 'list' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm' : 'text-gray-500'}`;
 
             if (!uniqueTerms.length) { container.innerHTML = `<div class="col-span-full text-center mt-20 text-gray-400">Nothing found</div>`; return; }
 
-            // --- 修正開始 ---
-            // 保留 flex-1, overflow-y-auto 等關鍵類別，並根據模式追加 grid 或 spacing
-            const baseClass = "flex-1 overflow-y-auto custom-scrollbar p-4"; // 這裡稍微加一點 p-4 讓邊緣好看點
+            const baseClass = "flex-1 overflow-y-auto custom-scrollbar p-4";
             
             if (mode === 'grid') {
                 container.className = `${baseClass} grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-20`;
@@ -1296,7 +1143,6 @@
                     ${uniqueTerms.map(term => UI.Templates.listItem(groups[term])).join('')}
                 </div>`;
             }
-            // --- 修正結束 ---
         },
         renderCalendar: () => {
             const y = AppState.calDate.getFullYear(), m = AppState.calDate.getMonth();
@@ -1322,9 +1168,6 @@
             const tStat = AppState.dailyStats[today] || { added: 0, reviewed: 0 };
             document.getElementById('today-added-count').innerText = tStat.added;
             document.getElementById('today-reviewed-count').innerText = tStat.reviewed;
-
-            // SRS Stats logic ... (Same as before)
-            // ... (省略部分 UI 渲染程式碼，請保持原樣) ...
         },
         changeMonth: (d) => { AppState.calDate.setMonth(AppState.calDate.getMonth() + d); UI.renderCalendar(); },
         
@@ -1348,11 +1191,8 @@
                     </div>
                 `).join('');
             },
-            // ... (Reader 相關 UI 邏輯保持原樣，僅需注意 hidePopup 等) ...
             renderContent: (articleId) => {
-                // ... (內容同上個版本，省略以節省長度，請複製原檔) ...
-                // 必須完整複製原檔的 reader.renderContent, showPopup, hidePopup 等
-                 const article = AppState.articles.find(a => a.id === articleId);
+                const article = AppState.articles.find(a => a.id === articleId);
                 if (!article) return;
                 
                 document.getElementById('reader-title').innerText = article.title;
@@ -1370,21 +1210,38 @@
 
                 AppState.currentTokens = article.content.split(/([^a-zA-Z0-9'-]+)/);
                 
-                const html = AppState.currentTokens.map((token, index) => {
+                body.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+
+                AppState.currentTokens.forEach((token, index) => {
                     if (/^[a-zA-Z][a-zA-Z0-9'-]*$/.test(token)) {
+                        const span = document.createElement('span');
+                        span.className = 'reader-word';
                         const lower = token.toLowerCase();
                         const wordEntries = AppState.words.filter(w => w.term.toLowerCase() === lower);
-                        let classes = "reader-word";
                         if (wordEntries.length > 0) {
                             const minLevel = Math.min(...wordEntries.map(w => w.level || 0));
-                            classes += ` word-lvl-${minLevel}`;
+                            span.classList.add(`word-lvl-${minLevel}`);
                         }
-                        return `<span class="${classes}" onclick="Controller.reader.clickWord(this, '${token}', ${index})">${token}</span>`;
+                        span.textContent = token;
+                        span.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            Controller.reader.clickWord(span, token, index);
+                        });
+                        fragment.appendChild(span);
+                    } else {
+                        const parts = token.split('\n');
+                        parts.forEach((part, pIdx) => {
+                            if (part) {
+                                fragment.appendChild(document.createTextNode(part));
+                            }
+                            if (pIdx < parts.length - 1) {
+                                fragment.appendChild(document.createElement('br'));
+                            }
+                        });
                     }
-                    return token.replace(/\n/g, '<br>'); 
-                }).join('');
-                
-                body.innerHTML = html;
+                });
+                body.appendChild(fragment);
             },
             showPopup: (rect, word, knownEntries, contextSentence) => {
                 if (AppState.reader.isPlaying) window.speechSynthesis.pause();
@@ -1444,8 +1301,7 @@
             }
         },
         Templates: {
-            // ... (Templates 需要完整複製原檔) ...
-             gridItem: (entries, basic) => {
+            gridItem: (entries, basic) => {
                 const w = entries[0];
                 const colors = { 'n.': 'bg-dict-n', 'v.': 'bg-dict-v', 'adj.': 'bg-dict-adj', 'adv.': 'bg-dict-adv', 'phr.': 'bg-dict-phr', 'other': 'bg-gray-500' };
                 const interval = w.interval || 0;
@@ -1558,7 +1414,6 @@
     const Controller = {
         init: () => {
             Core.init();
-            // UI.init() is moved to after auth login
             document.addEventListener('keydown', Controller.features.handleKey);
         },
         nav: {
@@ -1590,20 +1445,26 @@
                     });
                     preparedQueue = Object.values(groups).map(g => ({
                         entries: g,
-                        lastReview: Math.min(...g.map(i=>i.lastReview)),
-                        minLevel: Math.min(...g.map(i=>i.level||0))
+                        lastReview: Math.min(...g.map(i => i.lastReview || 0)),
+                        nextReview: Math.min(...g.map(i => i.nextReview || ((i.lastReview || now) + (i.interval || 1) * 86400000))),
+                        minLevel: Math.min(...g.map(i => i.level || 0))
                     }));
                 } else {
                     preparedQueue = filtered.map(w => ({
                         entries: [w],
-                        lastReview: w.lastReview,
+                        lastReview: w.lastReview || 0,
+                        nextReview: w.nextReview || ((w.lastReview || now) + (w.interval || 1) * 86400000),
                         minLevel: w.level || 0
                     }));
                 }
 
-                preparedQueue.sort((a,b) => {
-                    if (a.minLevel !== b.minLevel) return a.minLevel - b.minLevel;
-                    return a.lastReview - b.lastReview;
+                const now = Date.now();
+                preparedQueue.sort((a, b) => {
+                    const aDue = (a.nextReview || 0) <= now;
+                    const bDue = (b.nextReview || 0) <= now;
+                    if (aDue && !bDue) return -1;
+                    if (!aDue && bDue) return 1;
+                    return (a.nextReview || 0) - (b.nextReview || 0);
                 });
 
                 if (preparedQueue.length > limit) {
@@ -1668,7 +1529,6 @@
                 if (!term) { UI.toast('msg_empty'); return; }
                 let savedCount = 0;
                 
-                // Need to use for...of loop for async await
                 for (const block of blocks) {
                     const pos = block.querySelector('.inp-pos').value;
                     const def = block.querySelector('.inp-def').value.trim();
@@ -1729,7 +1589,6 @@
                     }
                 }
                 
-                // Delete removed definitions
                 for (const oldId of AppState.editingIds) {
                      if (!currentIds.includes(oldId)) await Core.deleteWord(oldId);
                 }
@@ -1750,14 +1609,12 @@
                         const batch = writeBatch(db);
                         let ops = 0;
 
-                        // Restore Stats
                         if(data.vocab_stats) {
                              AppState.dailyStats = { ...AppState.dailyStats, ...data.vocab_stats };
                              batch.set(doc(db, 'users', AppState.user.uid, 'data', 'stats'), AppState.dailyStats);
                              ops++;
                         }
 
-                        // Restore Words
                         if (data.vocab_data && Array.isArray(data.vocab_data)) {
                             const currentIds = new Set(AppState.words.map(w => w.id));
                             for (const w of data.vocab_data) {
@@ -1770,7 +1627,6 @@
                             }
                         }
 
-                        // Restore Articles
                         if (data.article_data && Array.isArray(data.article_data)) {
                              const currentArtIds = new Set(AppState.articles.map(a => a.id));
                              for (const a of data.article_data) {
@@ -1797,7 +1653,6 @@
                 input.value = '';
             },
             exportJSON: () => {
-                // Same export logic
                 const bundle = {
                     vocab_data: AppState.words,
                     article_data: AppState.articles,
@@ -1832,21 +1687,24 @@
                 input.value = '';
             },
             clearAll: async () => { 
-                if (confirm("確定要清空雲端與本地所有資料嗎？此操作無法復原。")) { 
-                    // Delete subcollections manually via loop (Client SDK cannot delete collection)
-                    // Words
-                    const batch = writeBatch(db);
-                    AppState.words.forEach(w => batch.delete(doc(db, 'users', AppState.user.uid, 'words', w.id)));
-                    AppState.articles.forEach(a => batch.delete(doc(db, 'users', AppState.user.uid, 'articles', a.id)));
-                    batch.delete(doc(db, 'users', AppState.user.uid, 'data', 'stats'));
+                if (confirm(Utils.t('confirm_clear_all'))) { 
+                    const ops = [];
+                    AppState.words.forEach(w => ops.push({ ref: doc(db, 'users', AppState.user.uid, 'words', w.id) }));
+                    AppState.articles.forEach(a => ops.push({ ref: doc(db, 'users', AppState.user.uid, 'articles', a.id) }));
+                    ops.push({ ref: doc(db, 'users', AppState.user.uid, 'data', 'stats') });
                     
-                    await batch.commit();
+                    for (let i = 0; i < ops.length; i += 400) {
+                        const batch = writeBatch(db);
+                        ops.slice(i, i + 400).forEach(op => batch.delete(op.ref));
+                        await batch.commit();
+                    }
+                    
                     AppState.words = [];
                     AppState.articles = [];
                     AppState.dailyStats = {};
                     UI.updateStats();
                     UI.renderList();
-                    UI.toast("資料已清空");
+                    UI.toast("msg_cleared");
                 } 
             },
             deleteGroup: async (term) => { 
@@ -1872,26 +1730,7 @@
             setLanguage: async (l) => { AppState.settings.lang = l; await Core.saveSettings(); UI.applySettings(); },
             toggleBasicMode: async (v) => { AppState.settings.basicMode = v; await Core.saveSettings(); UI.applySettings(); UI.renderList(); },
             toggleMergeReview: async (v) => { AppState.settings.mergeReview = v; await Core.saveSettings(); UI.applySettings(); },
-            setReviewLimit: async (v) => { AppState.settings.reviewLimit = parseInt(v); await Core.saveSettings(); UI.applySettings(); },
-            setApiKey: (v) => { 
-                const key = v.trim();
-                AppState.ai.apiKey = key; 
-                localStorage.setItem('vocab_ai_key', key); 
-                
-                // ▼▼▼ 新增這行：同步到雲端 ▼▼▼
-                Core.saveSettings(); 
-                
-                UI.toast("API Key 已儲存並同步"); 
-            },
-            setAiModel: (v) => { 
-                AppState.ai.model = v; 
-                localStorage.setItem('vocab_ai_model', v); 
-                
-                // ▼▼▼ 新增這行：同步到雲端 ▼▼▼
-                Core.saveSettings(); 
-                
-                UI.toast("模型已切換並同步"); 
-            },
+            setReviewLimit: async (v) => { AppState.settings.reviewLimit = parseInt(v); await Core.saveSettings(); UI.applySettings(); }
         },
         features: {
             toggleListViewMode: async (m) => { AppState.settings.listViewMode = m; await Core.saveSettings(); UI.renderList(document.getElementById('list-search').value); },
@@ -1911,76 +1750,57 @@
                 const item = AppState.review.queue[AppState.review.index];
                 if (!item || !item.entries) return;
 
-                // 取得 Firestore 的 batch 實例
                 const batch = writeBatch(db);
 
                 item.entries.forEach(word => {
                     const now = Date.now();
                     let currentInterval = word.interval || 0;
-                    // 預設 Ease Factor 為 2.5 (Anki 標準起始值)
                     let easeFactor = word.easeFactor || 2.5; 
                     let newInterval = 1;
 
-                    // --- SM-2 演算法變體邏輯 ---
-                    
                     if (rating <= 1) {
-                        // [0:陌生, 1:學習] -> 視為忘記或答錯
                         newInterval = 1;
-                        
-                        // 懲罰：降低 EF 值，最低不低於 1.3
-                        // 0 (陌生) 扣比較多，1 (學習) 扣比較少
                         easeFactor = Math.max(1.3, easeFactor - (rating === 0 ? 0.2 : 0.15));
                     } else {
-                        // [2:熟悉, 3:精通] -> 視為答對
                         if (currentInterval === 0) {
-                            // 第一次答對
                             newInterval = 1;
                         } else if (currentInterval === 1) {
-                            // 第二次答對，固定為 6 天 (或是 3 天，視個人偏好)
                             newInterval = 3; 
                         } else {
-                            // 之後依照 EF 值進行指數增長
-                            // 如果是 3 (精通)，給予額外 1.3 倍的獎勵 (Easy Bonus)
                             const bonus = (rating === 3) ? 1.3 : 1.0;
                             newInterval = Math.ceil(currentInterval * easeFactor * bonus);
                         }
 
-                        // 獎勵：如果是精通，提升 EF 值；如果是熟悉，微調或不變
                         if (rating === 3) {
                             easeFactor = Math.min(5.0, easeFactor + 0.15);
                         }
                     }
 
-                    // --- 計算新的 Level (用於 UI 顏色顯示) ---
-                    // 根據天數動態決定顏色，不再依賴固定索引
                     let newLevel = 0;
-                    if (newInterval >= 60) newLevel = 3;      // 精通 (綠)
-                    else if (newInterval >= 14) newLevel = 2; // 熟悉 (藍)
-                    else if (newInterval >= 3) newLevel = 1;  // 學習 (橘)
-                    else newLevel = 0;                        // 陌生 (紅)
+                    if (newInterval >= 60) newLevel = 3;
+                    else if (newInterval >= 14) newLevel = 2;
+                    else if (newInterval >= 3) newLevel = 1;
+                    else newLevel = 0;
 
                     const updateData = { 
                         level: newLevel, 
                         interval: newInterval, 
-                        easeFactor: parseFloat(easeFactor.toFixed(2)), // 儲存 EF 值
+                        easeFactor: parseFloat(easeFactor.toFixed(2)),
                         lastReview: now, 
                         nextReview: now + (newInterval * 86400000) 
                     };
                     
-                    // Add to batch
                     batch.update(doc(db, 'users', AppState.user.uid, 'words', word.id), updateData);
                     
-                    // Update Local State
                     const localIdx = AppState.words.findIndex(w => w.id === word.id);
                     if(localIdx > -1) {
                         AppState.words[localIdx] = { ...AppState.words[localIdx], ...updateData };
                     }
                 });
 
-                await batch.commit(); // Send to cloud
+                await batch.commit();
                 await Core.recordActivity('reviewed'); 
                 
-                // UI 更新邏輯 (維持原樣)
                 AppState.review.index++;
                 if (AppState.review.isFlipped) { 
                     setTimeout(() => { 
@@ -2034,29 +1854,7 @@
             timeTravel: (days) => {
                  UI.toast("時間旅行功能在雲端模式下已停用 (避免破壞資料)");
             },
-            undoTimeTravel: () => { },
-            autoFill: async () => {
-                    const wordInput = document.getElementById('add-word');
-                    const word = wordInput.value.trim();
-                    if (!word) { UI.toast("請先輸入單字"); return; }
-
-                    const mode = document.getElementById('ai-mode').value; // 取得使用者的選擇
-                    const data = await Core.fetchWordData(word, mode);     // 將選擇傳遞給 fetchWordData
-                    
-                    if (data) {
-                        // 填入第一個釋義區塊
-                        const container = document.getElementById('add-definitions-container');
-                        // 如果是空的，先清空預設的
-                        const firstBlock = container.querySelector('.def-block');
-                        
-                        if (firstBlock) {
-                            firstBlock.querySelector('.inp-pos').value = data.pos;
-                            firstBlock.querySelector('.inp-def').value = data.def;
-                            firstBlock.querySelector('.inp-ex').value = data.ex;
-                            UI.toast("AI 填寫完成！");
-                        }
-                    }
-                }
+            undoTimeTravel: () => { }
         },
         reader: {
             saveArticle: async () => {
@@ -2095,39 +1893,82 @@
                 if (sel.trim()) { document.getElementById('popup-input-ex').value = sel.trim(); } 
                 else { UI.toast("請先在文章中反白文字"); }
             },
-            playArticle: () => {
-                const content = document.getElementById('reader-body').innerText;
-                if(!content) return;
+            openCambridge: () => {
+                const word = document.getElementById('popup-word').innerText.trim();
+                if (word) {
+                    window.open(`https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(word)}`, '_blank');
+                }
+            },
+            playArticle: (startIdx = 0) => {
+                const article = AppState.articles.find(a => a.id === AppState.currentArticleId);
+                if (!article || !article.content) return;
+                
+                const rawSentences = article.content.match(/[^.!?\n]+[.!?]?/g) || [article.content];
+                const cleanSentences = rawSentences.map(s => s.trim()).filter(s => s.length > 0);
+                if (!cleanSentences.length) return;
+                
+                AppState.reader.sentences = cleanSentences;
+                AppState.reader.currentSentenceIdx = startIdx;
                 AppState.reader.isPlaying = true;
+                AppState.reader.isPaused = false;
                 UI.reader.updatePlayButton(true);
-                Utils.speak(content, null, AppState.reader.speed, () => {
-                    AppState.reader.isPlaying = false;
-                    UI.reader.updatePlayButton(false);
-                });
+                
+                Controller.reader.speakNextSentence();
+            },
+            speakNextSentence: () => {
+                if (!AppState.reader.isPlaying || AppState.reader.isPaused) return;
+                if (!AppState.reader.sentences || AppState.reader.currentSentenceIdx >= AppState.reader.sentences.length) {
+                    Controller.reader.stopArticle();
+                    return;
+                }
+                
+                const text = AppState.reader.sentences[AppState.reader.currentSentenceIdx];
+                window.speechSynthesis.cancel();
+                
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US';
+                u.rate = AppState.reader.speed || 1.0;
+                
+                u.onend = () => {
+                    if (!AppState.reader.isPlaying || AppState.reader.isPaused) return;
+                    AppState.reader.currentSentenceIdx++;
+                    Controller.reader.speakNextSentence();
+                };
+                
+                u.onerror = (err) => {
+                    if (err.error !== 'interrupted' && err.error !== 'canceled') {
+                        AppState.reader.currentSentenceIdx++;
+                        Controller.reader.speakNextSentence();
+                    }
+                };
+                
+                speechSynthesis.speak(u);
             },
             stopArticle: () => {
                 window.speechSynthesis.cancel();
                 AppState.reader.isPlaying = false;
+                AppState.reader.isPaused = false;
+                AppState.reader.currentSentenceIdx = 0;
                 UI.reader.updatePlayButton(false);
             },
             togglePlay: () => {
-                if (window.speechSynthesis.speaking) {
-                    if (window.speechSynthesis.paused) {
-                        window.speechSynthesis.resume();
-                        AppState.reader.isPlaying = true;
-                        UI.reader.updatePlayButton(true);
-                    } else {
-                        window.speechSynthesis.pause();
-                        AppState.reader.isPlaying = false; 
-                        UI.reader.updatePlayButton(false);
-                    }
+                if (!AppState.reader.isPlaying) {
+                    Controller.reader.playArticle(0);
+                } else if (!AppState.reader.isPaused) {
+                    window.speechSynthesis.cancel();
+                    AppState.reader.isPaused = true;
+                    UI.reader.updatePlayButton(false);
                 } else {
-                    Controller.reader.playArticle();
+                    AppState.reader.isPaused = false;
+                    UI.reader.updatePlayButton(true);
+                    Controller.reader.speakNextSentence();
                 }
             },
             setSpeed: (val) => {
-                AppState.reader.speed = parseFloat(val);
-                if (AppState.reader.isPlaying) { Controller.reader.stopArticle(); Controller.reader.playArticle(); }
+                AppState.reader.speed = parseFloat(val) || 1.0;
+                if (AppState.reader.isPlaying && !AppState.reader.isPaused) {
+                    Controller.reader.speakNextSentence();
+                }
             }
         }
     };
@@ -2136,7 +1977,7 @@
     window.Controller = Controller;
     window.UI = UI;
     window.Utils = Utils;
-    window.AppState = AppState; // 讓 Console 可以讀取到它
+    window.AppState = AppState;
 
     // Start App
     Controller.init();
