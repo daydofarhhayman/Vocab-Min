@@ -6,6 +6,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from fastmcp import FastMCP
 from starlette.responses import RedirectResponse
+from mcp.types import Icon
 
 # 1. 初始化 Firebase Admin
 cred_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
@@ -25,7 +26,15 @@ if not USER_ID:
     print("警告: 尚未設定 VOCABMIN_USER_ID 環境變數")
 
 # 2. 建立 FastMCP 伺服器實例
-mcp = FastMCP("VocabMin-Server")
+mcp = FastMCP(
+    "VocabMin-Server",
+    icons=[
+        Icon(
+            src="https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4d6.png",
+            mimeType="image/png"
+        )
+    ]
+)
 
 from starlette.responses import PlainTextResponse
 
