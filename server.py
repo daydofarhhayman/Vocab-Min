@@ -158,20 +158,6 @@ async def get_learning_stats() -> str:
         f"- 陌生 (New)：{levels[0]} 個"
     )
 
-import uvicorn
-from starlette.responses import JSONResponse
-
-# 取得 FastMCP 的 ASGI 應用
-app = mcp.sse_app()
-
-# 為根目錄加入 200 OK 健康檢查回應
-@app.route("/", methods=["GET", "HEAD"])
-async def root(request):
-    return JSONResponse({
-        "status": "ok",
-        "service": "VocabMin MCP Server",
-        "transport": "sse"
-    })
-
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    # 以 SSE 模式啟動服務
+    mcp.run(transport="sse")
