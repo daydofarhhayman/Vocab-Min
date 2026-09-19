@@ -159,6 +159,4 @@ async def get_learning_stats() -> str:
     )
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    # 將 transport 改為 "http"（即 Streamable HTTP 協定）
-    mcp.run(transport="http", host="0.0.0.0", port=port)
+    mcp.run(transport="sse")
