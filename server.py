@@ -26,6 +26,13 @@ if not USER_ID:
 # 2. 建立 FastMCP 伺服器實例
 mcp = FastMCP("VocabMin-Server")
 
+from starlette.responses import PlainTextResponse
+
+# 供 UptimeRobot 或健康檢查使用的 GET 端點
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request):
+    return PlainTextResponse("OK")
+
 
 # --- 工具 1: 新增單字 ---
 @mcp.tool()
