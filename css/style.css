@@ -1,0 +1,68 @@
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* UI Components */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+        .dark .glass-panel {
+            background: rgba(31, 41, 55, 0.8);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* Theme Overrides */
+        body.theme-simple .glass-panel {
+            background: #ffffff; backdrop-filter: none; -webkit-backdrop-filter: none;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        body.theme-simple.dark .glass-panel {
+            background: #1f2937; border-bottom: 1px solid #374151;
+        }
+        body.theme-simple .bg-decoration { display: none; }
+
+        /* Flip Card */
+        .card-flip-container { perspective: 1000px; }
+        .card-inner {
+            position: relative; width: 100%; height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform-style: preserve-3d; transform-origin: center center;
+        }
+        .card-front, .card-back {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            border-radius: 1.5rem; overflow: hidden;
+        }
+        .card-back { transform: rotateY(180deg); overflow-y: auto; }
+        .card-front { z-index: 2; }
+        .flipped .card-inner { transform: rotateY(180deg); }
+
+        /* Reader Styles */
+        .reader-content { line-height: 1.8; font-size: 1.125rem; }
+        .reader-word { cursor: pointer; border-radius: 2px; transition: background-color 0.15s; }
+        .reader-word:hover { background-color: rgba(99, 102, 241, 0.2); }
+        .dark .reader-word:hover { background-color: rgba(99, 102, 241, 0.4); }
+        
+        /* Highlight Levels (Only applied when toggle is ON) */
+        .highlight-on .word-lvl-0 { color: #ef4444; border-bottom: 2px dotted #ef4444; } /* New - Red */
+        .highlight-on .word-lvl-1 { color: #f97316; border-bottom: 2px dotted #f97316; } /* Learning - Orange */
+        .highlight-on .word-lvl-2 { color: #3b82f6; } /* Familiar - Blue */
+        .highlight-on .word-lvl-3 { color: #10b981; } /* Mastered - Green */
+        
+        /* Dark mode overrides for highlight */
+        .dark .highlight-on .word-lvl-0 { color: #f87171; border-color: #f87171; }
+        .dark .highlight-on .word-lvl-1 { color: #fb923c; border-color: #fb923c; }
+        .dark .highlight-on .word-lvl-2 { color: #60a5fa; }
+        .dark .highlight-on .word-lvl-3 { color: #34d399; }
+
+        /* Utilities */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        
+        .animate-enter { animation: fade-in-up 0.3s ease-out forwards; }
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
