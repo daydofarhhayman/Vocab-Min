@@ -5,6 +5,7 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 from fastmcp import FastMCP
+from starlette.responses import RedirectResponse
 
 # 1. 初始化 Firebase Admin
 cred_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
@@ -164,12 +165,6 @@ async def get_learning_stats() -> str:
         f"- 陌生 (New)：{levels[0]} 個"
     )
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    mcp.run(transport="http", host="0.0.0.0", port=port)
-
-
-from starlette.responses import RedirectResponse
 
 # 提供給 Gemini 抓取的自訂圖示
 @mcp.custom_route("/favicon.ico", methods=["GET"])
@@ -177,3 +172,9 @@ async def favicon(request):
     # 這裡可以換成任何你喜歡的公開圖片網址（例如這張開源的彩色書本圖示）
     icon_url = "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4d6.png"
     return RedirectResponse(url=icon_url)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    mcp.run(transport="http", host="0.0.0.0", port=port)
+
+
